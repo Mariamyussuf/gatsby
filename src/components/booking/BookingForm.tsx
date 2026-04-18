@@ -1,3 +1,6 @@
+declare const __SUPABASE_URL__: string
+declare const __SUPABASE_ANON_KEY__: string
+
 import { useState, useEffect } from "react"
 import {
   Box,
@@ -233,11 +236,11 @@ export function BookingForm({ tier, table, onTableFilled }: Props) {
 
       // 👉 Resend email trigger here
       // Trigger confirmation emails via Edge Function
-      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-confirmation-email`, {
+      await fetch(`${__SUPABASE_URL__}/functions/v1/send-confirmation-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
         },
         body: JSON.stringify({ reference, groupCode }),
       }).catch(() => {}) // Non-blocking

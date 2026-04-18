@@ -10,8 +10,10 @@ export const QR_EMAIL_DAYS_BEFORE = 3
 
 export const ADMIN_PASSWORD_HASH = "$2a$10$rOFnkCVG5J1K9V2cZ3mXPeKlm8I4V.BRfEOz6hQN7JjG5C6RHIH1y"
 
+declare const __SQUAD_PUBLIC_KEY__: string
+
 export const SQUAD_BASE_URL = "https://sandbox-api-d.squadco.com"
-export const SQUAD_PUBLIC_KEY = import.meta.env.VITE_SQUAD_PUBLIC_KEY as string
+export const SQUAD_PUBLIC_KEY = __SQUAD_PUBLIC_KEY__
 
 export const COLORS = {
   BG: "#1A0305",

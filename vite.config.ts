@@ -1,7 +1,6 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -13,15 +12,9 @@ export default defineConfig({
     allowedHosts: true,
   },
   define: {
-    // Allow secrets stored without VITE_ prefix (standard Replit naming)
-    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
-      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ""
-    ),
-    "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(
-      process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ""
-    ),
-    "import.meta.env.VITE_SQUAD_PUBLIC_KEY": JSON.stringify(
-      process.env.SQUAD_PUBLIC_KEY || process.env.VITE_SQUAD_PUBLIC_KEY || ""
-    ),
+    // Map Replit secrets (no VITE_ prefix) into what the app expects
+    "__SUPABASE_URL__": JSON.stringify(process.env.SUPABASE_URL || ""),
+    "__SUPABASE_ANON_KEY__": JSON.stringify(process.env.SUPABASE_ANON_KEY || ""),
+    "__SQUAD_PUBLIC_KEY__": JSON.stringify(process.env.SQUAD_PUBLIC_KEY || ""),
   },
 })
