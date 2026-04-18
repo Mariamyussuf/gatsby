@@ -2,6 +2,38 @@ declare const __SUPABASE_URL__: string
 declare const __SUPABASE_ANON_KEY__: string
 
 import { useState, useEffect } from "react"
+
+// Derive checkout JS URL from SQUAD_BASE_URL
+// e.g. https://sandbox-api-d.squadco.com → https://sandbox-checkout-d.squadco.com/widget/checkout.js
+// e.g. https://api-d.squadco.com          → https://checkout.squadco.com/widget/checkout.js
+function getSquadCheckoutUrl(baseUrl: string): string {
+  try {
+    const url = new URL(baseUrl)
+    const host = url.hostname // e.g. sandbox-api-d.squadco.com
+    const checkoutHost = host.replace(/^sandbox-api/, "sandbox-checkout").replace(/^api-d/, "checkout")
+    return `https://${checkoutHost}/widget/checkout.js`
+  } catch {
+    return "https://checkout.squadco.com/widget/checkout.js"
+  }
+}
+
+function loadSquadSDK(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).SquadPay) { resolve(); return }
+    const existing = document.getElementById("squad-sdk") as HTMLScriptElement | null
+    if (existing) {
+      existing.addEventListener("load", () => resolve())
+      existing.addEventListener("error", () => reject(new Error("Squad SDK failed to load")))
+      return
+    }
+    const script = document.createElement("script")
+    script.id = "squad-sdk"
+    script.src = src
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error(`Could not load Squad SDK from ${src}. Check your network or Squad key.`))
+    document.head.appendChild(script)
+  })
+}
 import {
   Box,
   Button,
@@ -133,9 +165,11 @@ export function BookingForm({ tier, table, onTableFilled }: Props) {
         return
       }
 
-      // Real Squad implementation
+      // Dynamically load Squad SDK then open payment modal
+      const checkoutUrl = getSquadCheckoutUrl(SQUAD_BASE_URL)
+      await loadSquadSDK(checkoutUrl)
       const SquadPay = (window as any).SquadPay
-      if (!SquadPay) throw new Error("Squad payment SDK not loaded")
+      if (!SquadPay) throw new Error("Squad SDK loaded but SquadPay not found on window. Check your Squad public key.")
 
       const squad = new SquadPay({
         onClose: () => { setLoading(false) },
