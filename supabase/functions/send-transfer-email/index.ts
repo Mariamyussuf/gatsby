@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? ""
-const FROM_EMAIL = "BUSA Gala <noreply@busagala.com>"
+const FROM_EMAIL = "BUSA Gala <my243898@gmail.com>"
 
 function buildTransferHtml(params: {
   new_name: string
