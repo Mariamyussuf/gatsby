@@ -34,10 +34,14 @@ export function TicketTiers({ onSelect }: Props) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const isMobile = useBreakpointValue({ base: true, md: false })
 
+  const [dbError, setDbError] = useState<string | null>(null)
+
   const fetchData = async () => {
-    const { data: tierData } = await supabase.from("ticket_tiers").select("*").order("price_kobo")
-    const { data: tableData } = await supabase.from("gala_tables").select("*")
-    if (tierData && tableData) {
+    const { data: tierData, error: tierErr } = await supabase.from("ticket_tiers").select("*").order("price_kobo")
+    const { data: tableData, error: tableErr } = await supabase.from("gala_tables").select("*")
+    if (tierErr || tableErr) {
+      setDbError((tierErr || tableErr)?.message || "Database error")
+    } else if (tierData && tableData) {
       const combined: TierWithData[] = tierData.map((t) => {
         const tables = tableData.filter((tb) => tb.tier_id === t.id)
         const totalBooked = tables.reduce((s, tb) => s + tb.seats_booked, 0)
@@ -62,6 +66,48 @@ export function TicketTiers({ onSelect }: Props) {
     return (
       <Box textAlign="center" py="20">
         <Spinner size="xl" style={{ color: COLORS.GOLD_BASE }} />
+      </Box>
+    )
+  }
+
+  if (dbError || tiers.length === 0) {
+    return (
+      <Box id="tickets" py="20" px={{ base: "4", md: "8" }} textAlign="center">
+        <VStack gap="6" maxW="560px" mx="auto">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <polygon points="24,4 44,18 44,30 24,44 4,30 4,18" fill="none" stroke={COLORS.GOLD_DIM} strokeWidth="2" opacity="0.6" />
+          </svg>
+          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "2rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>
+            Database Setup Required
+          </Text>
+          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.7rem", letterSpacing: "0.08em", color: COLORS.GOLD_DIM, lineHeight: "1.8" }}>
+            {dbError
+              ? `Connection error: ${dbError}`
+              : "No ticket tiers found. Run the seed SQL in your Supabase SQL Editor to populate the event data."}
+          </Text>
+          <Box
+            w="full"
+            p="5"
+            textAlign="left"
+            style={{ border: `1px solid ${COLORS.GOLD_DIM}30`, background: `${COLORS.PANEL_MID}40` }}
+          >
+            <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", letterSpacing: "0.2em", color: COLORS.GOLD_DIM, textTransform: "uppercase", marginBottom: "12px" }}>
+              Steps to set up:
+            </Text>
+            {[
+              "Go to your Supabase project dashboard",
+              "Open the SQL Editor",
+              "Run supabase/migrations/20260414194127_create_gatsby_gala_schema.sql",
+              "Then run supabase/migrations/20260418000000_seed_and_rpc.sql",
+              "Refresh this page",
+            ].map((step, i) => (
+              <HStack key={i} gap="3" mb="2" align="start">
+                <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: COLORS.GOLD_BASE, minWidth: "16px" }}>{i + 1}.</Text>
+                <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.65rem", color: COLORS.GOLD_DIM, letterSpacing: "0.05em", lineHeight: "1.6" }}>{step}</Text>
+              </HStack>
+            ))}
+          </Box>
+        </VStack>
       </Box>
     )
   }
