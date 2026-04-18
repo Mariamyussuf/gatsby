@@ -3,19 +3,9 @@ declare const __SUPABASE_ANON_KEY__: string
 
 import { useState, useEffect } from "react"
 
-// Derive checkout JS URL from SQUAD_BASE_URL
-// e.g. https://sandbox-api-d.squadco.com → https://sandbox-checkout-d.squadco.com/widget/checkout.js
-// e.g. https://api-d.squadco.com          → https://checkout.squadco.com/widget/checkout.js
-function getSquadCheckoutUrl(baseUrl: string): string {
-  try {
-    const url = new URL(baseUrl)
-    const host = url.hostname // e.g. sandbox-api-d.squadco.com
-    const checkoutHost = host.replace(/^sandbox-api/, "sandbox-checkout").replace(/^api-d/, "checkout")
-    return `https://${checkoutHost}/widget/checkout.js`
-  } catch {
-    return "https://checkout.squadco.com/widget/checkout.js"
-  }
-}
+// Squad uses the same checkout script URL for both sandbox and production.
+// The public key prefix (sandbox_pk_ vs pk_) determines the environment.
+const SQUAD_CHECKOUT_URL = "https://checkout.squadco.com/widget/checkout.js"
 
 function loadSquadSDK(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -46,7 +36,7 @@ import {
 } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import type { TicketTier, GalaTable } from "@/lib/supabase"
-import { COLORS, SQUAD_PUBLIC_KEY, SQUAD_BASE_URL } from "@/config/constants"
+import { COLORS, SQUAD_PUBLIC_KEY } from "@/config/constants"
 import { SuccessScreen } from "./SuccessScreen"
 import { toaster } from "@/components/ui/toaster"
 
@@ -166,8 +156,7 @@ export function BookingForm({ tier, table, onTableFilled }: Props) {
       }
 
       // Dynamically load Squad SDK then open payment modal
-      const checkoutUrl = getSquadCheckoutUrl(SQUAD_BASE_URL)
-      await loadSquadSDK(checkoutUrl)
+      await loadSquadSDK(SQUAD_CHECKOUT_URL)
       const SquadPay = (window as any).SquadPay
       if (!SquadPay) throw new Error("Squad SDK loaded but SquadPay not found on window. Check your Squad public key.")
 
