@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.squad-webhook]
 verify_jwt = false
+
+[functions.squad-initiate]
+verify_jwt = false

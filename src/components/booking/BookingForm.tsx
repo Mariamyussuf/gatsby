@@ -2,27 +2,6 @@ declare const __SUPABASE_URL__: string
 declare const __SUPABASE_ANON_KEY__: string
 
 import { useState, useEffect } from "react"
-
-// Squad uses the same checkout script URL for both sandbox and production.
-// The public key prefix (sandbox_pk_ vs pk_) determines the environment.
-const SQUAD_CHECKOUT_URL = "https://checkout.squadco.com/widget/checkout.js"
-
-// Returns true if SDK loaded, false if unavailable (e.g. CDN blocked in dev)
-function loadSquadSDK(src: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    if ((window as any).SquadPay) { resolve(true); return }
-    // Remove any previously-failed script tag so we can retry cleanly
-    const existing = document.getElementById("squad-sdk")
-    if (existing) existing.remove()
-    const script = document.createElement("script")
-    script.id = "squad-sdk"
-    script.src = src
-    const timer = setTimeout(() => resolve(false), 8000) // 8s timeout
-    script.onload = () => { clearTimeout(timer); resolve(true) }
-    script.onerror = () => { clearTimeout(timer); resolve(false) }
-    document.head.appendChild(script)
-  })
-}
 import {
   Box,
   Button,
@@ -35,7 +14,8 @@ import {
 } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import type { TicketTier, GalaTable } from "@/lib/supabase"
-import { COLORS, SQUAD_PUBLIC_KEY } from "@/config/constants"
+import { COLORS } from "@/config/constants"
+import { confirmBooking, PENDING_BOOKING_KEY, type PendingBooking } from "@/lib/confirmBooking"
 import { SuccessScreen } from "./SuccessScreen"
 import { toaster } from "@/components/ui/toaster"
 
@@ -56,10 +36,6 @@ function generateGroupCode(): string {
   let code = ""
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return `GATSBY-${code}`
-}
-
-function generateToken(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 16)}`
 }
 
 export function BookingForm({ tier, table, onTableFilled }: Props) {
@@ -139,151 +115,66 @@ export function BookingForm({ tier, table, onTableFilled }: Props) {
 
       if (txnErr) throw txnErr
 
-      // 👉 Squad payment initialisation here
-      // Load Squad inline payment
-      const squadPublicKey = SQUAD_PUBLIC_KEY || "sandbox_pk_sample_12345"
-
       const allAttendees = [
         { firstName, email, isPrimary: true },
         ...guests.map((g) => ({ firstName: g.firstName, email: g.email, isPrimary: false })),
       ]
 
-      // For dev/demo: simulate successful payment
-      if (!SQUAD_PUBLIC_KEY || SQUAD_PUBLIC_KEY === "undefined") {
-        await confirmPayment(txn.id, reference, groupCode, allAttendees)
-        return
+      const pending: PendingBooking = {
+        txnId: txn.id,
+        reference,
+        groupCode,
+        tierId: tier.id,
+        tierName: tier.name,
+        tableId: table.id,
+        tableNumber: table.table_number,
+        tableSeatsBooked: table.seats_booked,
+        tableSeatsTotal: table.seats_total,
+        quantity,
+        attendees: allAttendees,
       }
 
-      // Dynamically load Squad SDK then open payment modal.
-      // Falls back to dev simulation if CDN is unreachable (e.g. Replit proxy).
-      const sdkReady = await loadSquadSDK(SQUAD_CHECKOUT_URL)
-      if (!sdkReady || !(window as any).SquadPay) {
-        // In deployed production, Squad CDN is always reachable from users' browsers.
-        // In Replit dev, the proxy blocks external CDNs — simulate the payment instead.
-        console.warn("Squad SDK unavailable – running dev simulation")
-        toaster.create({ title: "Dev mode: simulating payment (Squad CDN unreachable in dev proxy)", type: "warning" })
-        await confirmPayment(txn.id, reference, groupCode, allAttendees)
-        return
-      }
-      const SquadPay = (window as any).SquadPay
+      // Save booking state so the callback page can complete it after redirect
+      sessionStorage.setItem(PENDING_BOOKING_KEY, JSON.stringify(pending))
 
-      const squad = new SquadPay({
-        onClose: () => { setLoading(false) },
-        onLoad: () => {},
-        onSuccess: async (data: any) => {
-          await confirmPayment(txn.id, reference, groupCode, allAttendees, data.transaction_ref)
-        },
-        key: squadPublicKey,
-        email,
-        amount: tier.price_kobo * quantity,
-        currency_code: "NGN",
-        transaction_ref: reference,
-        payment_channels: ["card", "bank", "ussd"],
-        metadata: {
-          tier: tier.name,
-          table: table.table_number,
-          quantity,
-          group_code: groupCode,
-        },
-      })
-      squad.setup()
-      squad.open()
-    } catch (e: any) {
-      toaster.error({ title: "Payment Error", description: e.message })
-      setLoading(false)
-    }
-  }
-
-  const confirmPayment = async (
-    txnId: string,
-    reference: string,
-    groupCode: string,
-    attendees: { firstName: string; email: string; isPrimary: boolean }[],
-    squadRef?: string
-  ) => {
-    try {
-      // Check table still has space
-      const { data: freshTable } = await supabase
-        .from("gala_tables")
-        .select("seats_booked, seats_total")
-        .eq("id", table.id)
-        .single()
-
-      if (freshTable && freshTable.seats_booked + quantity > freshTable.seats_total) {
-        onTableFilled()
-        setLoading(false)
-        return
-      }
-
-      // Update transaction status
-      await supabase.from("transactions").update({
-        payment_status: "confirmed",
-        squad_reference: squadRef || `demo_${Date.now()}`,
-        confirmed_at: new Date().toISOString(),
-      }).eq("id", txnId)
-
-      // Atomically decrement seats
-      try {
-        await supabase.rpc("increment_seats_booked", {
-          p_table_id: table.id,
-          p_quantity: quantity,
-        })
-      } catch {
-        // Fallback if RPC not available
-        await supabase.from("gala_tables").update({
-          seats_booked: table.seats_booked + quantity,
-        }).eq("id", table.id)
-      }
-
-      // Create attendee records
-      for (const att of attendees) {
-        const ticketId = `BUSA-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
-        const manageToken = generateToken()
-        await supabase.from("attendees").insert({
-          transaction_id: txnId,
-          tier_id: tier.id,
-          table_id: table.id,
-          table_number: table.table_number,
-          first_name: att.firstName,
-          last_name: att.isPrimary ? lastName : att.firstName,
-          email: att.email,
-          ticket_id: ticketId,
-          group_booking_code: groupCode,
-          is_primary: att.isPrimary,
-          transfer_locked: false,
-          manage_token: manageToken,
-        })
-
-        // Create VVIP pickup record if needed
-        if (tier.name === "VVIP") {
-          const { data: attendeeRecord } = await supabase.from("attendees")
-            .select("id").eq("manage_token", manageToken).single()
-          if (attendeeRecord) {
-            await supabase.from("vvip_pickups").insert({ attendee_id: attendeeRecord.id })
-          }
-        }
-      }
-
-      // 👉 Resend email trigger here
-      // Trigger confirmation emails via Edge Function
-      await fetch(`${__SUPABASE_URL__}/functions/v1/send-confirmation-email`, {
+      // Call edge function to initiate payment with Squad's Direct API (server-side secret key)
+      const callbackUrl = `${window.location.origin}/payment/callback`
+      const initiateRes = await fetch(`${__SUPABASE_URL__}/functions/v1/squad-initiate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
         },
-        body: JSON.stringify({ reference, groupCode }),
-      }).catch(() => {}) // Non-blocking
-
-      setSuccessData({
-        groupCode,
-        tier: tier.name,
-        tableNumber: table.table_number,
-        quantity,
+        body: JSON.stringify({
+          email,
+          amount: tier.price_kobo * quantity,
+          transaction_ref: reference,
+          callback_url: callbackUrl,
+          metadata: {
+            tier: tier.name,
+            table: table.table_number,
+            quantity,
+            group_code: groupCode,
+          },
+        }),
       })
+
+      const initiateData = await initiateRes.json()
+
+      if (!initiateRes.ok || !initiateData.auth_url) {
+        // Squad initiate failed — fall back to dev simulation
+        console.warn("Squad initiate failed, running dev simulation:", initiateData)
+        toaster.create({ title: "Payment gateway unavailable — running simulation", type: "warning" })
+        const result = await confirmBooking(pending)
+        sessionStorage.removeItem(PENDING_BOOKING_KEY)
+        setSuccessData({ groupCode: result.groupCode, tier: result.tierName, tableNumber: result.tableNumber, quantity: result.quantity })
+        return
+      }
+
+      // Redirect to Squad's hosted payment page
+      window.location.href = initiateData.auth_url
     } catch (e: any) {
-      toaster.error({ title: "Error confirming payment", description: e.message })
-    } finally {
+      toaster.error({ title: "Payment Error", description: e.message })
       setLoading(false)
     }
   }

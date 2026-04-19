@@ -5,6 +5,7 @@ import { COLORS } from "@/config/constants"
 import HomePage from "@/pages/Home"
 import AdminPage from "@/pages/Admin"
 import ManageTicketPage from "@/pages/ManageTicket"
+import PaymentCallbackPage from "@/pages/PaymentCallback"
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/manage/:manageToken" element={<ManageTicketPage />} />
+        <Route path="/payment/callback" element={<PaymentCallbackPage />} />
       </Routes>
     </Box>
   )
