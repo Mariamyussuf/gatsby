@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from "jsr:@supabase/supabase-js@2"
+import { createClient } from "npm:@supabase/supabase-js@2"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -117,49 +117,63 @@ Deno.serve(async (req: Request) => {
     // Use service role to bypass RLS and look up all attendees for this booking
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // Find attendees by group booking code or transaction reference
-    let attendeesQuery = supabase
-      .from("attendees")
-      .select(`
-        id, first_name, last_name, email, ticket_id, manage_token,
-        table_number, group_booking_code,
-        tier:ticket_tiers(name),
-        transaction:transactions!inner(quantity, reference)
-      `)
-
+    // Fetch attendees by group code (preferred) or fall back to reference lookup
+    let attendeeRows: any[] = []
     if (groupCode) {
-      attendeesQuery = attendeesQuery.eq("group_booking_code", groupCode)
-    } else {
-      attendeesQuery = attendeesQuery.eq("transaction.reference", reference)
+      const { data, error } = await supabase
+        .from("attendees")
+        .select("id, first_name, last_name, email, ticket_id, manage_token, table_number, group_booking_code, tier_id, transaction_id")
+        .eq("group_booking_code", groupCode)
+      if (error) throw new Error(`DB attendees lookup failed: ${error.message}`)
+      attendeeRows = data ?? []
+    } else if (reference) {
+      const { data: txn } = await supabase
+        .from("transactions")
+        .select("id, group_booking_code, quantity")
+        .eq("reference", reference)
+        .single()
+      if (txn) {
+        const { data, error } = await supabase
+          .from("attendees")
+          .select("id, first_name, last_name, email, ticket_id, manage_token, table_number, group_booking_code, tier_id, transaction_id")
+          .eq("group_booking_code", txn.group_booking_code)
+        if (error) throw new Error(`DB attendees lookup failed: ${error.message}`)
+        attendeeRows = data ?? []
+      }
     }
 
-    const { data: attendees, error: fetchErr } = await attendeesQuery
-
-    if (fetchErr || !attendees || attendees.length === 0) {
+    if (attendeeRows.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No attendees found", details: fetchErr?.message }),
+        JSON.stringify({ error: "No attendees found for this booking" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
 
     if (!RESEND_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured in Supabase secrets" }),
+        JSON.stringify({ error: "RESEND_API_KEY not configured — add it in Supabase Dashboard → Settings → Edge Functions → Secrets" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
 
+    // Look up tier name once (all attendees in a group share the same tier)
+    const { data: tierRow } = await supabase
+      .from("ticket_tiers")
+      .select("name")
+      .eq("id", attendeeRows[0].tier_id)
+      .single()
+    const tier_name = tierRow?.name ?? "Regular"
+    const ticket_count = attendeeRows.length
+
     const baseUrl = base_url ?? "https://busagala.com"
     const results: { email: string; success: boolean; error?: string }[] = []
 
-    for (const att of attendees) {
+    for (const att of attendeeRows) {
       const manage_url = `${baseUrl}/manage/${att.manage_token}`
-      const tier_name = (att.tier as any)?.name ?? "Regular"
-      const ticket_count = (att.transaction as any)?.quantity ?? attendees.length
 
       const html = buildEmailHtml({
         first_name: att.first_name,
-        last_name: att.last_name,
+        last_name: att.last_name ?? att.first_name,
         tier_name,
         table_number: att.table_number,
         ticket_count,
