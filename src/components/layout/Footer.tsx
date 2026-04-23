@@ -12,7 +12,7 @@ const faqs = [
   },
   {
     q: "What time does the evening begin?",
-    a: "Doors open at 6:30 PM for drinks and mingling. The formal programme begins at 7:00 PM sharp. Guests are encouraged to be seated by 6:55 PM.",
+    a: "Doors open at 4:00PM for drinks and mingling. The formal programme begins at 4:00 PM sharp. Guests are encouraged to be seated by 3:55 PM.",
   },
   {
     q: "What should I expect on the evening?",
@@ -162,7 +162,7 @@ export function Footer() {
               opacity: 0.7,
             }}
           >
-            {EVENT_VENUE} · Friday, 23rd May 2025
+            {EVENT_VENUE} · Saturday, 23rd May 2025
           </Text>
 
           {/* Divider */}
@@ -209,7 +209,7 @@ export function Footer() {
               textTransform: "uppercase",
             }}
           >
-            © 2025 Bells University Student Association · All Rights Reserved
+            © 2026 Bells University Student Association · Built to cook
           </Text>
         </VStack>
       </Box>
