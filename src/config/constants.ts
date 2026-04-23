@@ -1,4 +1,4 @@
-export const EVENT_DATE = new Date("2026-05-23T19:00:00+01:00")
+export const EVENT_DATE = new Date("2026-05-23T16:00:00+01:00")
 export const EVENT_TITLE = "THE GREAT GATSBY GALA"
 export const EVENT_SUBTITLE = "BUSA Dinner & Awards"
 export const EVENT_VENUE = "MARQUEE HALL"
