@@ -162,7 +162,7 @@ export function Footer() {
               opacity: 0.7,
             }}
           >
-            {EVENT_VENUE} · Saturday, 23rd May 2025
+            {EVENT_VENUE} · Saturday, 23rd May 2026
           </Text>
 
           {/* Divider */}
