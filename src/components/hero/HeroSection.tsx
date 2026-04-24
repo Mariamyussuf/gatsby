@@ -184,7 +184,7 @@ export function HeroSection() {
               opacity: 0.8,
             }}
           >
-            Friday, 23rd May 2025 · 7:00PM
+            Saturday, 23rd May 2026 · 4:00PM
           </Text>
         </Box>
 
