@@ -4,11 +4,11 @@ import { COLORS, EVENT_SUBTITLE, EVENT_VENUE, CONTACT_EMAIL } from "@/config/con
 const faqs = [
   {
     q: "What is the dress code?",
-    a: "Black Tie — this is a formal affair. Gentlemen are expected in black tie or traditional formal attire. Ladies in floor-length gowns or elegant formal wear. The Gala demands your finest.",
+    a: "An elegant affair. Guests are invited to dress their finest and arrive prepared for a red carpet evening. Gentlemen in formal or traditional attire, and ladies in floor-length gowns or sophisticated evening wear.",
   },
   {
     q: "Is parking available at Marquee Hall?",
-    a: "Yes, parking is available on-site and in the surrounding areas. We recommend arriving early. VVIP guests will receive complimentary valet parking as part of their experience.",
+    a: "NO, Car Rides are available to be booked from your hostel to the Dinner. We recommend arriving early. VVIP guests will receive complimentary valet parking as part of their experience.",
   },
   {
     q: "What time does the evening begin?",
@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "What should I expect on the evening?",
-    a: "An unforgettable experience: a Gatsby-themed grand entrance, gourmet dinner, the BUSA Awards ceremony, live entertainment, and dancing. Every detail has been curated for opulence.",
+    a: "An unforgettable experience: a Gatsby-themed grand entrance, gourmet dinner, the BUSA Awards ceremony, live entertainment, and dancing. Every detail has been curated for opulence.The Dinner starts by 4PM and ends 7PM with an After Party at Marquee by 8PM curated specially to give you the best time",
   },
   {
     q: "How do I get my QR entry code?",
