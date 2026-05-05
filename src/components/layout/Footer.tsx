@@ -194,7 +194,7 @@ export function Footer() {
                 textDecoration: "none",
               }}
             >
-              {CONTACT_EMAIL}
+              {0907636287}
             </Text>
           </HStack>
 
