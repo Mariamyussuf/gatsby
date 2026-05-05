@@ -8,7 +8,7 @@ const faqs = [
   },
   {
     q: "Is parking available at Marquee Hall?",
-    a: "NO, Car Rides are available to be booked from your hostel to the Dinner. We recommend arriving early or calling 09076836287 to book a ride. VVIP guests will receive complimentary valet parking as part of their experience.",
+    a: "NO, Car Rides are available to be booked from your hostel to the Dinner. We recommend arriving early and calling 07062493791 to book a ride. VVIP guests will receive complimentary valet parking as part of their experience.",
   },
   {
     q: "What time does the evening begin?",
