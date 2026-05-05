@@ -171,7 +171,7 @@ export function Footer() {
           </Box>
 
           {/* Contact */}
-    <VStack gap="3" w="full" align="center">
+<VStack gap="2" align="center">
   <Text
     style={{
       fontFamily: "'Josefin Sans', sans-serif",
@@ -181,7 +181,9 @@ export function Footer() {
       opacity: 0.7,
     }}
   >
-  <VStack gap="2" align="center">
+    Enquiries:
+  </Text>
+
   {[
     { label: "Uncle Bolu", value: "09076836287", link: "tel:09076836287" },
     { label: "Feyi", value: "07061976004", link: "tel:07061976004" },
