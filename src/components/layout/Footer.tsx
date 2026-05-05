@@ -182,21 +182,50 @@ export function Footer() {
               }}
             >
               Enquiries:
-            </Text>
-            <Text
-              as="a"
-              href={`0907636287`}
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.6rem",
-                letterSpacing: "0.1em",
-                color: COLORS.GOLD_BASE,
-                textDecoration: "none",
-              }}
-            >
-              {0907636287}
-            </Text>
-          </HStack>
+           <VStack gap="2" w="full" align="stretch">
+  {[
+    { label: "Uncle Bolu", value: "09076836287", link: "tel:09076836287" },
+    { label: "Feyi", value: "07061976004", link: "tel:07061976004" },
+    { label: "Email", value: "Bellsuniversitybusa@gmail.com", link: "mailto:Bellsuniversitybusa@gmail.com" },
+  ].map((item, i) => (
+    <Box
+      as="a"
+      key={i}
+      href={item.link}
+      px="4"
+      py="3"
+      borderRadius="md"
+      style={{
+        display: "block",
+        border: `1px solid ${COLORS.GOLD_DIM}30`,
+        background: `${COLORS.GOLD_GLOW}05`,
+        textDecoration: "none",
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: "'Josefin Sans', sans-serif",
+          fontSize: "0.7rem",
+          letterSpacing: "0.08em",
+          color: COLORS.GOLD_DIM,
+        }}
+      >
+        {item.label}
+      </Text>
+
+      <Text
+        style={{
+          fontFamily: "'Josefin Sans', sans-serif",
+          fontSize: "0.85rem",
+          letterSpacing: "0.05em",
+          color: COLORS.GOLD_BASE,
+        }}
+      >
+        {item.value}
+      </Text>
+    </Box>
+  ))}
+</VStack>
 
           {/* Copyright */}
           <Text
