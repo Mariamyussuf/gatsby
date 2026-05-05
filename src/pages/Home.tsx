@@ -3,6 +3,7 @@ import { Box } from "@chakra-ui/react"
 import { HeroSection } from "@/components/hero/HeroSection"
 import { TicketTiers } from "@/components/tickets/TicketTiers"
 import { BookingForm } from "@/components/booking/BookingForm"
+import { BookRideSection } from "@/components/booking/BookRideSection"
 import { Footer } from "@/components/layout/Footer"
 import { COLORS } from "@/config/constants"
 import type { TicketTier, GalaTable } from "@/lib/supabase"
@@ -35,6 +36,7 @@ export default function HomePage() {
           onTableFilled={handleTableFilled}
         />
       )}
+      <BookRideSection />
       <Footer />
     </Box>
   )
