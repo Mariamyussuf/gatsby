@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "What should I expect on the evening?",
-    a: "An unforgettable experience: a Gatsby-themed grand entrance, gourmet dinner, the BUSA Awards ceremony, live entertainment, and dancing. Every detail has been curated for opulence.The Dinner starts by 4PM and ends 7PM with an After Party at Marquee by 8PM curated specially to give you the best time",
+    a: "An unforgettable experience: a Gatsby-themed grand entrance, gourmet dinner, the BUSA Awards ceremony, live entertainment, and dancing. Every detail has been curated for opulence.The Dinner starts by 4PM and ends 9PM but with an After Party at Marquee by 8PM curated specially to give you the best time",
   },
   {
     q: "How do I get my QR entry code?",
