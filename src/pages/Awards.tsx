@@ -7,7 +7,6 @@ import {
   Text,
   Button,
   Input,
-  Textarea,
   Container,
   Spinner,
 } from "@chakra-ui/react"
@@ -37,8 +36,6 @@ interface CategoryNomination {
   categoryId: string
   categoryName: string
   nomineeName: string
-  nomineeMatric: string
-  nominationReason: string
 }
 
 const MATRIC_REGEX = /^\d{4}\/\d{5}$/
@@ -51,7 +48,6 @@ const categoryGroups = [
   { name: "Innovation Awards", type: "innovation" as const, emoji: "💡" },
 ]
 
-// Shared input styling
 const inputStyles = {
   bg: "transparent" as const,
   borderColor: COLORS.GOLD_DIM,
@@ -60,7 +56,6 @@ const inputStyles = {
   _focus: { borderColor: COLORS.GOLD_BRIGHT, boxShadow: "none" },
 }
 
-// Form field wrapper component
 function FormField({
   label,
   hint,
@@ -98,9 +93,6 @@ export default function AwardsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  // Step 0 = nominator info
-  // Steps 1..categoryGroups.length = one per category group
-  // Final step = review & submit
   const [currentStep, setCurrentStep] = useState(0)
   const totalSteps = 1 + categoryGroups.length + 1
 
@@ -143,7 +135,6 @@ export default function AwardsPage() {
 
       setCategories(grouped)
 
-      // Pre-populate nominations per category group
       const initialNominations: Record<string, CategoryNomination[]> = {}
       categoryGroups.forEach((group) => {
         const cats = grouped[group.type] || []
@@ -151,8 +142,6 @@ export default function AwardsPage() {
           categoryId: cat.id,
           categoryName: cat.name,
           nomineeName: "",
-          nomineeMatric: "",
-          nominationReason: "",
         }))
       })
       setNominations(initialNominations)
@@ -191,13 +180,9 @@ export default function AwardsPage() {
     const newErrors: Record<string, string> = {}
     const groupNominations = nominations[groupType] || []
     groupNominations.forEach((nom, i) => {
-      if (!nom.nomineeName.trim()) newErrors[`${groupType}_${i}_name`] = "Nominee name is required"
-      if (!nom.nomineeMatric.trim()) {
-        newErrors[`${groupType}_${i}_matric`] = "Matric number is required"
-      } else if (!MATRIC_REGEX.test(nom.nomineeMatric.trim())) {
-        newErrors[`${groupType}_${i}_matric`] = "Format must be YYYY/NNNNN — e.g. 2024/12345"
+      if (!nom.nomineeName.trim()) {
+        newErrors[`${groupType}_${i}_name`] = "Nominee name is required"
       }
-      if (!nom.nominationReason.trim()) newErrors[`${groupType}_${i}_reason`] = "Please provide a reason"
     })
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -220,26 +205,15 @@ export default function AwardsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  const updateNomination = (
-    groupType: string,
-    index: number,
-    field: keyof CategoryNomination,
-    value: string
-  ) => {
+  const updateNomination = (groupType: string, index: number, value: string) => {
     setNominations((prev) => {
       const updated = [...(prev[groupType] || [])]
-      updated[index] = { ...updated[index], [field]: value }
+      updated[index] = { ...updated[index], nomineeName: value }
       return { ...prev, [groupType]: updated }
     })
-    const errorKey =
-      field === "nomineeName"
-        ? `${groupType}_${index}_name`
-        : field === "nomineeMatric"
-        ? `${groupType}_${index}_matric`
-        : `${groupType}_${index}_reason`
     setErrors((prev) => {
       const next = { ...prev }
-      delete next[errorKey]
+      delete next[`${groupType}_${index}_name`]
       return next
     })
   }
@@ -251,12 +225,10 @@ export default function AwardsPage() {
       const inserts = allNominations.map((nom) => ({
         award_category_id: nom.categoryId,
         nominee_name: nom.nomineeName,
-        nominee_matric: nom.nomineeMatric,
         nominator_name: nominator.name,
         nominator_email: nominator.email,
         nominator_matric: nominator.matricNumber,
         nominator_phone: nominator.phone || null,
-        nomination_reason: nom.nominationReason,
       }))
 
       const { error } = await supabase.from("award_nominations").insert(inserts)
@@ -302,8 +274,8 @@ export default function AwardsPage() {
             Nominations Submitted!
           </Heading>
           <Text color={COLORS.TEXT} maxW="480px" fontSize="md">
-            Thank you, {nominator.name.split(" ")[0]}. Your nominations have been recorded across all{" "}
-            {categoryGroups.length} categories.
+            Thank you, {nominator.name.split(" ")[0]}. Your nominations have been recorded across
+            all {categoryGroups.length} categories.
           </Text>
         </VStack>
       </Box>
@@ -464,7 +436,7 @@ export default function AwardsPage() {
                     </Heading>
                   </HStack>
                   <Text color={COLORS.TEXT_DIM} fontSize="sm">
-                    Nominate someone for each award below. All fields are required.
+                    Enter the name of your nominee for each award below.
                   </Text>
                 </VStack>
 
@@ -483,49 +455,21 @@ export default function AwardsPage() {
                       fontSize="xs"
                       textTransform="uppercase"
                       letterSpacing="1px"
-                      mb={4}
+                      mb={3}
                     >
                       {nom.categoryName}
                     </Text>
-                    <VStack gap={4} align="stretch">
-                      <FormField
-                        label="Nominee's Full Name *"
-                        error={errors[`${group.type}_${i}_name`]}
-                      >
-                        <Input
-                          placeholder="Who are you nominating?"
-                          value={nom.nomineeName}
-                          onChange={(e) => updateNomination(group.type, i, "nomineeName", e.target.value)}
-                          {...inputStyles}
-                        />
-                      </FormField>
-
-                      <FormField
-                        label="Nominee's Matric Number *"
-                        hint="Format: 2024/12345"
-                        error={errors[`${group.type}_${i}_matric`]}
-                      >
-                        <Input
-                          placeholder="2024/12345"
-                          value={nom.nomineeMatric}
-                          onChange={(e) => updateNomination(group.type, i, "nomineeMatric", e.target.value)}
-                          {...inputStyles}
-                        />
-                      </FormField>
-
-                      <FormField
-                        label="Why do you nominate them? *"
-                        error={errors[`${group.type}_${i}_reason`]}
-                      >
-                        <Textarea
-                          placeholder="Give specific examples of what they've done to deserve this award..."
-                          value={nom.nominationReason}
-                          onChange={(e) => updateNomination(group.type, i, "nominationReason", e.target.value)}
-                          minH="100px"
-                          {...inputStyles}
-                        />
-                      </FormField>
-                    </VStack>
+                    <FormField
+                      label="Nominee's Full Name *"
+                      error={errors[`${group.type}_${i}_name`]}
+                    >
+                      <Input
+                        placeholder="Who are you nominating?"
+                        value={nom.nomineeName}
+                        onChange={(e) => updateNomination(group.type, i, e.target.value)}
+                        {...inputStyles}
+                      />
+                    </FormField>
                   </Box>
                 ))}
               </VStack>
@@ -585,7 +529,7 @@ export default function AwardsPage() {
                 </VStack>
               </Box>
 
-              {/* All nominations */}
+              {/* Nominations summary */}
               {categoryGroups.map((group) => {
                 const groupNominations = nominations[group.type] || []
                 return (
@@ -609,31 +553,17 @@ export default function AwardsPage() {
                         {group.name}
                       </Text>
                     </HStack>
-                    <VStack gap={4} align="stretch">
+                    <VStack gap={3} align="stretch">
                       {groupNominations.map((nom, i) => (
-                        <Box
+                        <HStack
                           key={nom.categoryId}
+                          justify="space-between"
                           borderTop={i > 0 ? `1px solid ${COLORS.GOLD_DIM}` : undefined}
                           pt={i > 0 ? 3 : 0}
                         >
-                          <Text
-                            color={COLORS.GOLD_DIM}
-                            fontSize="xs"
-                            textTransform="uppercase"
-                            letterSpacing="0.5px"
-                            mb={1}
-                          >
-                            {nom.categoryName}
-                          </Text>
-                          <Text color={COLORS.TEXT} fontSize="sm">
-                            <Text as="span" color={COLORS.TEXT_DIM}>Nominee: </Text>
-                            {nom.nomineeName} ({nom.nomineeMatric})
-                          </Text>
-                          <Text color={COLORS.TEXT} fontSize="sm" mt={1}>
-                            <Text as="span" color={COLORS.TEXT_DIM}>Reason: </Text>
-                            {nom.nominationReason}
-                          </Text>
-                        </Box>
+                          <Text color={COLORS.TEXT_DIM} fontSize="sm">{nom.categoryName}</Text>
+                          <Text color={COLORS.TEXT} fontSize="sm" fontWeight="500">{nom.nomineeName}</Text>
+                        </HStack>
                       ))}
                     </VStack>
                   </Box>
@@ -643,7 +573,7 @@ export default function AwardsPage() {
           )}
         </Box>
 
-        {/* Navigation Buttons */}
+        {/* Navigation */}
         <HStack justify="space-between" gap={4}>
           <Button
             variant="outline"
