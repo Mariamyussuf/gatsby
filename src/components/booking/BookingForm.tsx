@@ -162,13 +162,8 @@ export function BookingForm({ tier, table, onTableFilled }: Props) {
       const initiateData = await initiateRes.json()
 
       if (!initiateRes.ok || !initiateData.auth_url) {
-        // Squad initiate failed — fall back to dev simulation
-        console.warn("Squad initiate failed, running dev simulation:", initiateData)
-        toaster.create({ title: "Payment gateway unavailable — running simulation", type: "warning" })
-        const result = await confirmBooking(pending)
-        sessionStorage.removeItem(PENDING_BOOKING_KEY)
-        setSuccessData({ groupCode: result.groupCode, tier: result.tierName, tableNumber: result.tableNumber, quantity: result.quantity })
-        return
+        // Payment gateway failed — require actual payment, don't skip it
+        throw new Error("Unable to process payment. Please try again or contact support.")
       }
 
       // Redirect to Squad's hosted payment page
