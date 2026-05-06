@@ -7,10 +7,85 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, apikey",
 }
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? ""
+const GOOGLE_SERVICE_ACCOUNT_EMAIL = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL") ?? ""
+const GOOGLE_PRIVATE_KEY = Deno.env.get("GOOGLE_PRIVATE_KEY") ?? ""
 const FROM_EMAIL = "BUSA Gala <noreply@busagala.com>"
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+
+// Generate OAuth 2.0 token for Google Mail API
+async function getGoogleAccessToken(): Promise<string> {
+  const header = {
+    alg: "RS256",
+    typ: "JWT",
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  const claim = {
+    iss: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    scope: "https://www.googleapis.com/auth/gmail.send",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now,
+  }
+
+  const headerEncoded = btoa(JSON.stringify(header)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
+  const claimEncoded = btoa(JSON.stringify(claim)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
+
+  const payload = `${headerEncoded}.${claimEncoded}`
+
+  // Sign with private key using Web Crypto API
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"))
+  const algorithm = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }
+  const key = await crypto.subtle.importKey("pkcs8", keyData, algorithm, false, ["sign"])
+  const signature = await crypto.subtle.sign(algorithm, key, encoder.encode(payload))
+
+  const signatureEncoded = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "")
+
+  const jwt = `${payload}.${signatureEncoded}`
+
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }).toString(),
+  })
+
+  const tokenData = await tokenRes.json()
+  if (!tokenRes.ok || !tokenData.access_token) {
+    throw new Error(`Failed to get Google access token: ${JSON.stringify(tokenData)}`)
+  }
+
+  return tokenData.access_token
+}
+
+// Send email via Gmail API
+async function sendGoogleMail(to: string, subject: string, html: string): Promise<boolean> {
+  const accessToken = await getGoogleAccessToken()
+
+  const message = {
+    raw: btoa(
+      `From: ${FROM_EMAIL}\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset="UTF-8"\r\n\r\n${html}`,
+    ),
+  }
+
+  const gmailRes = await fetch("https://www.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(message),
+  })
+
+  return gmailRes.ok
+}
 
 function buildEmailHtml(params: {
   first_name: string
@@ -149,9 +224,9 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    if (!RESEND_API_KEY) {
+    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
       return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured — add it in Supabase Dashboard → Settings → Edge Functions → Secrets" }),
+        JSON.stringify({ error: "Google Mail credentials not configured — add GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY in Supabase Dashboard → Settings → Edge Functions → Secrets" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
@@ -182,28 +257,24 @@ Deno.serve(async (req: Request) => {
         manage_url,
       })
 
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: FROM_EMAIL,
-          to: [att.email],
-          subject: `✦ Your Gatsby Gala Ticket — ${tier_name} · Table ${att.table_number}`,
+      try {
+        const success = await sendGoogleMail(
+          att.email,
+          `✦ Your Gatsby Gala Ticket — ${tier_name} · Table ${att.table_number}`,
           html,
-        }),
-      })
+        )
 
-      const resendData = await resendRes.json()
-
-      if (resendRes.ok) {
-        results.push({ email: att.email, success: true })
-        await supabase.from("attendees").update({ qr_code_sent: true }).eq("id", att.id)
-      } else {
-        console.error("Resend error for", att.email, resendData)
-        results.push({ email: att.email, success: false, error: JSON.stringify(resendData) })
+        if (success) {
+          results.push({ email: att.email, success: true })
+          await supabase.from("attendees").update({ qr_code_sent: true }).eq("id", att.id)
+        } else {
+          console.error("Gmail send failed for", att.email)
+          results.push({ email: att.email, success: false, error: "Gmail API returned error" })
+        }
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error("Gmail error for", att.email, errorMsg)
+        results.push({ email: att.email, success: false, error: errorMsg })
       }
     }
 
