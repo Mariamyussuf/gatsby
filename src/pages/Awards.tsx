@@ -9,6 +9,7 @@ import {
   Input,
   Container,
   Spinner,
+  Link,
 } from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
@@ -41,11 +42,11 @@ interface CategoryNomination {
 const MATRIC_REGEX = /^\d{4}\/\d{5}$/
 
 const categoryGroups = [
-  { name: "Social Awards", type: "social" as const, emoji: "👥" },
-  { name: "Creative Awards", type: "creative" as const, emoji: "🎨" },
-  { name: "Sports Awards", type: "sports" as const, emoji: "⚽" },
-  { name: "Entertainment Awards", type: "entertainment" as const, emoji: "🎭" },
-  { name: "Innovation Awards", type: "innovation" as const, emoji: "💡" },
+  { name: "Social Awards", type: "social" as const },
+  { name: "Creative Awards", type: "creative" as const },
+  { name: "Sports Awards", type: "sports" as const },
+  { name: "Entertainment Awards", type: "entertainment" as const },
+  { name: "Innovation Awards", type: "innovation" as const },
 ]
 
 const inputStyles = {
@@ -234,6 +235,7 @@ export default function AwardsPage() {
       const { error } = await supabase.from("award_nominations").insert(inserts)
       if (error) throw error
       setSubmitted(true)
+      window.scrollTo({ top: 0, behavior: "smooth" })
     } catch (error) {
       console.error("Submission error:", error)
       toaster.create({
@@ -262,20 +264,50 @@ export default function AwardsPage() {
   // ── SUCCESS ───────────────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <Box minH="100vh" bg={COLORS.BG} display="flex" alignItems="center" justifyContent="center">
-        <VStack gap={6} textAlign="center" px={6}>
-          <Text fontSize="5xl">🏆</Text>
-          <Heading
-            fontFamily="'Cormorant Garamond', serif"
-            color={COLORS.GOLD_BRIGHT}
-            fontSize="3xl"
-            letterSpacing="1px"
+      <Box minH="100vh" bg={COLORS.BG} display="flex" alignItems="center" justifyContent="center" px={6}>
+        <VStack gap={8} textAlign="center" maxW="520px">
+          <VStack gap={3}>
+            <Heading
+              fontFamily="'Cormorant Garamond', serif"
+              color={COLORS.GOLD_BRIGHT}
+              fontSize="3xl"
+              letterSpacing="1px"
+            >
+              Thank You, {nominator.name.split(" ")[0]}.
+            </Heading>
+            <Text color={COLORS.TEXT} fontSize="md" lineHeight="1.8">
+              Your nominations have been received. The people you believe in are one step closer
+              to being celebrated.
+            </Text>
+          </VStack>
+
+          <Box
+            borderTop={`1px solid ${COLORS.GOLD_DIM}`}
+            borderBottom={`1px solid ${COLORS.GOLD_DIM}`}
+            py={6}
+            px={4}
+            width="100%"
           >
-            Nominations Submitted!
-          </Heading>
-          <Text color={COLORS.TEXT} maxW="480px" fontSize="md">
-            Thank you, {nominator.name.split(" ")[0]}. Your nominations have been recorded across
-            all {categoryGroups.length} categories.
+            <Text color={COLORS.TEXT_DIM} fontSize="sm" mb={4} lineHeight="1.8">
+              Now get your tickets and be part of the night it all goes down.
+              Don't hear about it — be a part of it.
+            </Text>
+            <Link href="https://busagreatgatbsy.vercel.app/" target="_blank" _hover={{ textDecoration: "none" }}>
+              <Button
+                bg={COLORS.GOLD_BRIGHT}
+                color={COLORS.BG}
+                width="100%"
+                _hover={{ opacity: 0.9 }}
+                fontSize="sm"
+                letterSpacing="0.5px"
+              >
+                Get Your Tickets →
+              </Button>
+            </Link>
+          </Box>
+
+          <Text color={COLORS.TEXT_DIM} fontSize="xs" letterSpacing="2px" textTransform="uppercase">
+            BUSA Great Gatsby
           </Text>
         </VStack>
       </Box>
@@ -286,13 +318,13 @@ export default function AwardsPage() {
     currentStep === 0
       ? "Your Info"
       : currentStep <= categoryGroups.length
-      ? `${categoryGroups[currentStep - 1].emoji} ${categoryGroups[currentStep - 1].name}`
+      ? categoryGroups[currentStep - 1].name
       : "Review & Submit"
 
   // ── MAIN RENDER ───────────────────────────────────────────────────────────────
   return (
-    <Box minH="100vh" bg={COLORS.BG} pt={12} pb={20}>
-      <Container maxW="680px">
+    <Box minH="100vh" bg={COLORS.BG} pt={12} pb={4} display="flex" flexDirection="column">
+      <Container maxW="680px" flex={1}>
         {/* Page Header */}
         <VStack gap={3} mb={10} textAlign="center">
           <Heading
@@ -315,10 +347,10 @@ export default function AwardsPage() {
               {currentGroupLabel}
             </Text>
             <Text color={COLORS.TEXT_DIM} fontSize="xs">
-              Step {currentStep + 1} of {totalSteps}
+              {currentStep + 1} / {totalSteps}
             </Text>
           </HStack>
-          <Box width="100%" bg={COLORS.PANEL_MID} borderRadius="full" h="6px" overflow="hidden">
+          <Box width="100%" bg={COLORS.PANEL_MID} borderRadius="full" h="4px" overflow="hidden">
             <Box
               h="100%"
               bg={COLORS.GOLD_BRIGHT}
@@ -327,19 +359,6 @@ export default function AwardsPage() {
               style={{ transition: "width 0.4s ease" }}
             />
           </Box>
-          <HStack justify="space-between" mt={3}>
-            {Array.from({ length: totalSteps }).map((_, i) => (
-              <Box
-                key={i}
-                w="8px"
-                h="8px"
-                borderRadius="full"
-                bg={i <= currentStep ? COLORS.GOLD_BRIGHT : COLORS.PANEL_MID}
-                flexShrink={0}
-                style={{ transition: "background 0.3s ease" }}
-              />
-            ))}
-          </HStack>
         </Box>
 
         {/* Step Card */}
@@ -424,17 +443,14 @@ export default function AwardsPage() {
             return (
               <VStack gap={6} align="stretch">
                 <VStack align="start" gap={1}>
-                  <HStack gap={3} align="center">
-                    <Text fontSize="2xl">{group.emoji}</Text>
-                    <Heading
-                      fontFamily="'Cormorant Garamond', serif"
-                      color={COLORS.GOLD_BRIGHT}
-                      fontSize="2xl"
-                      letterSpacing="1px"
-                    >
-                      {group.name}
-                    </Heading>
-                  </HStack>
+                  <Heading
+                    fontFamily="'Cormorant Garamond', serif"
+                    color={COLORS.GOLD_BRIGHT}
+                    fontSize="2xl"
+                    letterSpacing="1px"
+                  >
+                    {group.name}
+                  </Heading>
                   <Text color={COLORS.TEXT_DIM} fontSize="sm">
                     Enter the name of your nominee for each award below.
                   </Text>
@@ -541,18 +557,16 @@ export default function AwardsPage() {
                     borderRadius="lg"
                     p={5}
                   >
-                    <HStack gap={2} mb={4}>
-                      <Text>{group.emoji}</Text>
-                      <Text
-                        color={COLORS.GOLD_BASE}
-                        fontWeight="600"
-                        fontSize="xs"
-                        textTransform="uppercase"
-                        letterSpacing="1px"
-                      >
-                        {group.name}
-                      </Text>
-                    </HStack>
+                    <Text
+                      color={COLORS.GOLD_BASE}
+                      fontWeight="600"
+                      fontSize="xs"
+                      textTransform="uppercase"
+                      letterSpacing="1px"
+                      mb={4}
+                    >
+                      {group.name}
+                    </Text>
                     <VStack gap={3} align="stretch">
                       {groupNominations.map((nom, i) => (
                         <HStack
@@ -560,9 +574,10 @@ export default function AwardsPage() {
                           justify="space-between"
                           borderTop={i > 0 ? `1px solid ${COLORS.GOLD_DIM}` : undefined}
                           pt={i > 0 ? 3 : 0}
+                          align="start"
                         >
-                          <Text color={COLORS.TEXT_DIM} fontSize="sm">{nom.categoryName}</Text>
-                          <Text color={COLORS.TEXT} fontSize="sm" fontWeight="500">{nom.nomineeName}</Text>
+                          <Text color={COLORS.TEXT_DIM} fontSize="sm" flex={1}>{nom.categoryName}</Text>
+                          <Text color={COLORS.TEXT} fontSize="sm" fontWeight="500" textAlign="right">{nom.nomineeName}</Text>
                         </HStack>
                       ))}
                     </VStack>
@@ -574,7 +589,7 @@ export default function AwardsPage() {
         </Box>
 
         {/* Navigation */}
-        <HStack justify="space-between" gap={4}>
+        <HStack justify="space-between" gap={4} mb={16}>
           <Button
             variant="outline"
             borderColor={COLORS.GOLD_DIM}
@@ -605,11 +620,28 @@ export default function AwardsPage() {
               _hover={{ opacity: 0.9 }}
               px={8}
             >
-              Submit All Nominations 🏆
+              Submit Nominations
             </Button>
           )}
         </HStack>
       </Container>
+
+      {/* Footer */}
+      <Box
+        borderTop={`1px solid ${COLORS.GOLD_DIM}`}
+        py={5}
+        textAlign="center"
+      >
+        <Text
+          color={COLORS.GOLD_DIM}
+          fontSize="xs"
+          letterSpacing="4px"
+          textTransform="uppercase"
+          fontFamily="'Cormorant Garamond', serif"
+        >
+          BUILT TO COOK
+        </Text>
+      </Box>
     </Box>
   )
 }
