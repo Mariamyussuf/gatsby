@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from "npm:@supabase/supabase-js@2"
+import { createClient } from "jsr:@supabase/supabase-js@2"
+import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,9 +8,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, apikey",
 }
 
-const GOOGLE_SERVICE_ACCOUNT_EMAIL = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL") ?? ""
-const GOOGLE_PRIVATE_KEY = Deno.env.get("GOOGLE_PRIVATE_KEY") ?? ""
-const FROM_EMAIL = "BUSA Gala <noreply@busagala.com>"
+const GMAIL_USER = "temitopeyr@gmail.com"
+const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD") ?? ""
+const FROM_EMAIL = `BUSA Gala <${GMAIL_USER}>`
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 
@@ -60,9 +61,8 @@ function buildEmailHtml(params: {
     <div class="subtitle">BUSA Dinner &amp; Awards 2026</div>
   </div>
   <div class="body">
-    <div class="greeting">Welcome to Stardom, ${first_name}.</div>
-    <p class="text">Your payment has been processed, and your ticket is officially confirmed. We&apos;re thrilled to have you join us for The Great Gatsby Gala — an unforgettable evening of elegance, celebration, and timeless memories.</p>
-    <div class="divider"></div>
+    <div class="greeting">Dear ${first_name} ${last_name},</div>
+    <p class="text">Your ticket has been confirmed. We look forward to welcoming you to an evening of elegance, celebration, and unforgettable memories.</p>
     <div class="ticket-card">
       <div class="ticket-row">
         <span class="ticket-label">Ticket ID</span>
@@ -85,15 +85,12 @@ function buildEmailHtml(params: {
         <span class="ticket-value">${ticket_count}</span>
       </div>
     </div>
-    <p class="text"><strong style="color: #C9A84C;">Your Booking Details</strong><br/>Everything you need is right here. Your group code and ticket ID are your VIP passes to an extraordinary night.</p>
+    <p class="text">You can manage your ticket — including transferring it or updating your details — using the link below.</p>
     <div style="text-align:center">
-      <a href="${manage_url}" class="btn">Manage Your Booking</a>
+      <a href="${manage_url}" class="btn">Manage My Ticket</a>
     </div>
     <div class="divider"></div>
-    <p class="text" style="font-size:13px; color:#C9A84C; font-weight:600;">A Personal Thank You</p>
-    <p class="text" style="font-size:12px; color:#B8A090; line-height:1.8;">Thank you for choosing to celebrate with us. Your presence makes this gala truly special. From the moment you arrive at our red carpet through the final toast, we&apos;ve curated every detail with you in mind. Get ready to experience an evening of unparalleled elegance and celebration.</p>
-    <div class="divider"></div>
-    <p class="text" style="font-size:12px; color:#6B5040;">📌 <strong>Event Details:</strong> Black tie attire · Doors open 6:30 PM · Bring this email or your Ticket ID. Questions? Contact us at gala@busa.co.uk</p>
+    <p class="text" style="font-size:12px; color:#6B5040;">Please bring this email or your ticket ID to the event. Doors open at 6:30 PM. Black tie required.</p>
   </div>
   <div class="footer">
     <div class="footer-text">Birmingham University Students' Association<br/>The Great Gatsby Gala · BUSA Dinner &amp; Awards 2026</div>
@@ -119,66 +116,50 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Use service role to bypass RLS and look up all attendees for this booking
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // Fetch attendees by group code (preferred) or fall back to reference lookup
-    let attendeeRows: any[] = []
+    let attendeesQuery = supabase
+      .from("attendees")
+      .select(`
+        id, first_name, last_name, email, ticket_id, manage_token,
+        table_number, group_booking_code,
+        tier:ticket_tiers(name),
+        transaction:transactions!inner(quantity, reference)
+      `)
+
     if (groupCode) {
-      const { data, error } = await supabase
-        .from("attendees")
-        .select("id, first_name, last_name, email, ticket_id, manage_token, table_number, group_booking_code, tier_id, transaction_id")
-        .eq("group_booking_code", groupCode)
-      if (error) throw new Error(`DB attendees lookup failed: ${error.message}`)
-      attendeeRows = data ?? []
-    } else if (reference) {
-      const { data: txn } = await supabase
-        .from("transactions")
-        .select("id, group_booking_code, quantity")
-        .eq("reference", reference)
-        .single()
-      if (txn) {
-        const { data, error } = await supabase
-          .from("attendees")
-          .select("id, first_name, last_name, email, ticket_id, manage_token, table_number, group_booking_code, tier_id, transaction_id")
-          .eq("group_booking_code", txn.group_booking_code)
-        if (error) throw new Error(`DB attendees lookup failed: ${error.message}`)
-        attendeeRows = data ?? []
-      }
+      attendeesQuery = attendeesQuery.eq("group_booking_code", groupCode)
+    } else {
+      attendeesQuery = attendeesQuery.eq("transaction.reference", reference)
     }
 
-    if (attendeeRows.length === 0) {
+    const { data: attendees, error: fetchErr } = await attendeesQuery
+
+    if (fetchErr || !attendees || attendees.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No attendees found for this booking" }),
+        JSON.stringify({ error: "No attendees found", details: fetchErr?.message }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
 
-    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+    if (!GMAIL_APP_PASSWORD) {
       return new Response(
-        JSON.stringify({ error: "Google Mail credentials not configured — add GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY in Supabase Dashboard → Settings → Edge Functions → Secrets" }),
+        JSON.stringify({ error: "GMAIL_APP_PASSWORD not configured in Supabase secrets" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
 
-    // Look up tier name once (all attendees in a group share the same tier)
-    const { data: tierRow } = await supabase
-      .from("ticket_tiers")
-      .select("name")
-      .eq("id", attendeeRows[0].tier_id)
-      .single()
-    const tier_name = tierRow?.name ?? "Regular"
-    const ticket_count = attendeeRows.length
-
     const baseUrl = base_url ?? "https://busagala.com"
     const results: { email: string; success: boolean; error?: string }[] = []
 
-    for (const att of attendeeRows) {
+    for (const att of attendees) {
       const manage_url = `${baseUrl}/manage/${att.manage_token}`
+      const tier_name = (att.tier as any)?.name ?? "Regular"
+      const ticket_count = (att.transaction as any)?.quantity ?? attendees.length
 
       const html = buildEmailHtml({
         first_name: att.first_name,
-        last_name: att.last_name ?? att.first_name,
+        last_name: att.last_name,
         tier_name,
         table_number: att.table_number,
         ticket_count,
@@ -188,24 +169,33 @@ Deno.serve(async (req: Request) => {
       })
 
       try {
-        const success = await sendGoogleMail(
-          att.email,
-          `✦ Your Gatsby Gala Ticket — ${tier_name} · Table ${att.table_number}`,
-          html,
-        )
+        const client = new SMTPClient({
+          connection: {
+            hostname: "smtp.gmail.com",
+            port: 465,
+            tls: true,
+            auth: {
+              username: GMAIL_USER,
+              password: GMAIL_APP_PASSWORD,
+            },
+          },
+        })
 
-        if (success) {
-          results.push({ email: att.email, success: true })
-          await supabase.from("attendees").update({ qr_code_sent: true }).eq("id", att.id)
-          console.log(`✓ Email sent to ${att.email}`)
-        } else {
-          console.error("Gmail send failed for", att.email)
-          results.push({ email: att.email, success: false, error: "Gmail API returned error" })
-        }
-      } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : String(err)
-        console.error("Gmail error for", att.email, errorMsg)
-        results.push({ email: att.email, success: false, error: errorMsg })
+        await client.send({
+          from: FROM_EMAIL,
+          to: att.email,
+          subject: `✦ Your Gatsby Gala Ticket — ${tier_name} · Table ${att.table_number}`,
+          html,
+        })
+
+        await client.close()
+
+        results.push({ email: att.email, success: true })
+        await supabase.from("attendees").update({ qr_code_sent: true }).eq("id", att.id)
+      } catch (mailErr: unknown) {
+        const errMsg = mailErr instanceof Error ? mailErr.message : String(mailErr)
+        console.error("SMTP error for", att.email, errMsg)
+        results.push({ email: att.email, success: false, error: errMsg })
       }
     }
 
