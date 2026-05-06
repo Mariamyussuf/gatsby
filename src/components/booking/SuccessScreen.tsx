@@ -22,16 +22,31 @@ const PARTICLES = Array.from({ length: 28 }, (_, i) => ({
 }))
 
 export function SuccessScreen({ groupCode, tier, tableNumber, quantity, primaryEmail }: Props) {
-  const [phase, setPhase] = useState<"carpet" | "reveal" | "done">("carpet")
+  const [phase, setPhase] = useState<"carpet" | "spotlight" | "reveal" | "done">("carpet")
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("reveal"), 2400)
-    const t2 = setTimeout(() => setPhase("done"), 3200)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    const t1 = setTimeout(() => setPhase("spotlight"), 1800)
+    const t2 = setTimeout(() => setPhase("reveal"), 3000)
+    const t3 = setTimeout(() => setPhase("done"), 4200)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
   return (
     <Box position="relative" minH="100vh" overflow="hidden">
+
+      {/* ── SPOTLIGHT EFFECT ── */}
+      {(phase === "carpet" || phase === "spotlight") && (
+        <Box
+          position="fixed"
+          inset="0"
+          zIndex="40"
+          pointerEvents="none"
+          style={{
+            background: `radial-gradient(circle at 50% 40%, ${COLORS.GOLD_GLOW}15 0%, transparent 60%)`,
+            animation: phase === "spotlight" ? "spotlightPulse 1.2s ease-out both" : "none",
+          }}
+        />
+      )}
 
       {/* ── RED CARPET REVEAL OVERLAY ── */}
       {phase !== "done" && (
@@ -46,24 +61,25 @@ export function SuccessScreen({ groupCode, tier, tableNumber, quantity, primaryE
           style={{
             background: COLORS.BG,
             opacity: phase === "reveal" ? 0 : 1,
-            transition: "opacity 0.8s ease",
+            transition: "opacity 1s ease",
             pointerEvents: phase === "reveal" ? "none" : "all",
           }}
         >
-          {/* Gold confetti particles */}
+          {/* Gold confetti particles - enhanced burst */}
           {PARTICLES.map((p) => (
             <div
               key={p.id}
               style={{
                 position: "absolute",
-                top: "-20px",
-                left: p.left,
+                top: "50%",
+                left: "50%",
                 width: p.size,
                 height: p.size,
                 background: p.color,
                 borderRadius: p.id % 4 === 0 ? "50%" : "2px",
                 transform: `rotate(${p.rotate})`,
-                animation: `confettiFall ${p.duration} ${p.delay} ease-in both`,
+                animation: phase === "spotlight" ? `confettiBurst ${2.5 + Math.random() * 0.5}s ${p.delay} ease-out both` : `confettiFall ${p.duration} ${p.delay} ease-in both`,
+                boxShadow: `0 0 ${6 + Math.random() * 6}px ${p.color}`,
                 ["--drift" as any]: p.drift,
               }}
             />
@@ -134,7 +150,7 @@ export function SuccessScreen({ groupCode, tier, tableNumber, quantity, primaryE
           <Box
             mt="10"
             textAlign="center"
-            style={{ animation: "fadeInUp 0.7s 1.2s ease-out both" }}
+            style={{ animation: phase === "spotlight" ? "fadeInDown 0.8s 0.4s ease-out both" : "fadeInUp 0.7s 1.2s ease-out both" }}
           >
             <Text
               style={{
@@ -144,21 +160,36 @@ export function SuccessScreen({ groupCode, tier, tableNumber, quantity, primaryE
                 color: COLORS.GOLD_DIM,
                 textTransform: "uppercase",
                 marginBottom: "8px",
+                animation: "pulse 2s ease-in-out infinite",
               }}
             >
-              ✦ The Carpet is Rolled ✦
+              ✦ Welcome to Stardom ✦
             </Text>
             <Text
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "2.6rem",
+                fontSize: phase === "spotlight" ? "3.2rem" : "2.6rem",
                 fontWeight: "700",
                 color: COLORS.GOLD_BRIGHT,
-                textShadow: `0 0 40px ${COLORS.GOLD_GLOW}`,
+                textShadow: `0 0 60px ${COLORS.GOLD_GLOW}`,
                 lineHeight: "1",
+                transition: "all 0.8s ease",
               }}
             >
-              Your Seat Awaits
+              The Red Carpet Unfolds
+            </Text>
+            <Text
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.7rem",
+                letterSpacing: "0.2em",
+                color: COLORS.GOLD_BASE,
+                marginTop: "16px",
+                opacity: phase === "reveal" ? 1 : 0,
+                transition: "opacity 0.6s ease 2.2s",
+              }}
+            >
+              FOR YOU
             </Text>
           </Box>
         </Box>
@@ -174,10 +205,10 @@ export function SuccessScreen({ groupCode, tier, tableNumber, quantity, primaryE
         style={{
           border: `2px solid ${COLORS.GOLD_DIM}`,
           background: `linear-gradient(180deg, ${COLORS.PANEL_MID}80 0%, ${COLORS.BG} 100%)`,
-          boxShadow: `0 0 60px ${COLORS.GOLD_GLOW}30`,
+          boxShadow: phase === "done" ? `0 0 80px ${COLORS.GOLD_GLOW}50, inset 0 0 40px ${COLORS.GOLD_GLOW}20` : `0 0 60px ${COLORS.GOLD_GLOW}30`,
           opacity: phase === "done" ? 1 : 0,
-          transform: phase === "done" ? "translateY(0)" : "translateY(40px)",
-          transition: "opacity 0.7s ease, transform 0.7s ease",
+          transform: phase === "done" ? "translateY(0) scale(1)" : "translateY(60px) scale(0.95)",
+          transition: "all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
         }}
       >
         <VStack gap="6">
@@ -271,9 +302,26 @@ export function SuccessScreen({ groupCode, tier, tableNumber, quantity, primaryE
           0%   { transform: translateY(0)     rotate(0deg)   translateX(0);        opacity: 1; }
           100% { transform: translateY(100vh) rotate(720deg) translateX(var(--drift, 60px)); opacity: 0; }
         }
+        @keyframes confettiBurst {
+          0%   { transform: translate(0, 0) rotate(0deg);   opacity: 1; }
+          100% { transform: translate(var(--drift, 100px), -100vh) rotate(720deg); opacity: 0; }
+        }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-30px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spotlightPulse {
+          0%   { opacity: 0; transform: scale(0.8); }
+          50%  { opacity: 1; }
+          100% { opacity: 0; transform: scale(1.2); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.7; }
+          50%      { opacity: 1; }
         }
       `}</style>
     </Box>
