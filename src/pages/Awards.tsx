@@ -154,8 +154,8 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
       justifyContent="center"
       position="relative"
       overflow="hidden"
-      px={6}
-      py="100px"
+      px={4}
+      py={10}
     >
       {/* Ambient glow */}
       <Box
@@ -170,21 +170,11 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         pointerEvents="none"
       />
 
-      {/* Horizontal rule top */}
-      <Box
-        position="absolute"
-        top="48px"
-        left="10%"
-        right="10%"
-        h="1px"
-        bg={`linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}40, transparent)`}
-        style={{ opacity: visible ? 1 : 0, transition: "opacity 1.2s ease 0.2s" }}
-      />
-
       <VStack
-        gap={8}
+        gap={6}
         textAlign="center"
-        maxW="560px"
+        w="100%"
+        maxW="480px"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "translateY(0)" : "translateY(24px)",
@@ -192,13 +182,13 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         }}
       >
         <VStack gap={2}>
-          <Text color={COLORS.GOLD_DIM} fontSize="xs" letterSpacing="6px" textTransform="uppercase">
+          <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="4px" textTransform="uppercase">
             Bells University Student Association
           </Text>
           <Heading
             fontFamily="'Cormorant Garamond', serif"
             color={COLORS.GOLD_BRIGHT}
-            fontSize={{ base: "4xl", md: "6xl" }}
+            fontSize={{ base: "4xl", md: "5xl" }}
             letterSpacing="4px"
             fontWeight="300"
             lineHeight="1.1"
@@ -207,8 +197,8 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           </Heading>
           <Text
             color={COLORS.GOLD_DIM}
-            fontSize="xs"
-            letterSpacing="4px"
+            fontSize="9px"
+            letterSpacing="3px"
             textTransform="uppercase"
             mt={1}
           >
@@ -216,26 +206,19 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           </Text>
         </VStack>
 
-        <Box
-          w="1px"
-          h="48px"
-          bg={`linear-gradient(180deg, transparent, ${COLORS.GOLD_DIM}50, transparent)`}
-          mx="auto"
-        />
-
-        <Text color={COLORS.GOLD_DIM} fontSize="sm" lineHeight="1.9" maxW="420px">
+        <Text color={COLORS.GOLD_DIM} fontSize="sm" lineHeight="1.9" maxW="340px" px={2}>
           Six categories. One night. The people who moved, created, led, and inspired —
           it's time to put their names forward.
         </Text>
 
         {/* Award categories preview */}
-        <VStack gap={2} width="100%">
+        <VStack gap={1} width="100%">
           {AWARD_GROUPS.map((group, i) => (
             <Box
               key={group.type}
               width="100%"
-              py={2}
-              px={4}
+              py={1.5}
+              px={3}
               borderLeft={`1px solid ${COLORS.GOLD_DIM}30`}
               style={{
                 opacity: visible ? 1 : 0,
@@ -243,24 +226,24 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
               }}
             >
               <HStack justify="space-between">
-                <Text color={COLORS.GOLD_DIM} fontSize="xs" letterSpacing="1px" textTransform="uppercase">
+                <Text color={COLORS.GOLD_DIM} fontSize="10px" letterSpacing="1px" textTransform="uppercase">
                   {group.name}
                 </Text>
                 {group.badge && (
                   <Text
                     color={COLORS.GOLD_BASE}
-                    fontSize="9px"
-                    letterSpacing="1.5px"
+                    fontSize="8px"
+                    letterSpacing="1px"
                     textTransform="uppercase"
                     border={`1px solid ${COLORS.GOLD_DIM}50`}
-                    px={2}
+                    px={1.5}
                     py={0.5}
                     borderRadius="2px"
                   >
                     {group.badge}
                   </Text>
                 )}
-                <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">
+                <Text color={`${COLORS.GOLD_DIM}70`} fontSize="10px">
                   {group.awards.length} award{group.awards.length !== 1 ? "s" : ""}
                 </Text>
               </HStack>
@@ -274,38 +257,27 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           color={COLORS.GOLD_BASE}
           border={`1px solid ${COLORS.GOLD_DIM}60`}
           borderRadius="2px"
-          px={10}
-          py={6}
+          px={8}
+          py={5}
           fontSize="xs"
-          letterSpacing="4px"
+          letterSpacing="3px"
           textTransform="uppercase"
+          width="100%"
           _hover={{ bg: `${COLORS.GOLD_GLOW}10`, borderColor: COLORS.GOLD_BASE }}
           style={{ opacity: visible ? 1 : 0, transition: "opacity 0.6s ease 1.6s" }}
         >
           Begin Nominations
         </Button>
-      </VStack>
 
-      {/* Horizontal rule bottom */}
-      <Box
-        position="absolute"
-        bottom="48px"
-        left="10%"
-        right="10%"
-        h="1px"
-        bg={`linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}40, transparent)`}
-        style={{ opacity: visible ? 1 : 0, transition: "opacity 1.2s ease 0.2s" }}
-      />
-      <Text
-        position="absolute"
-        bottom="24px"
-        color={`${COLORS.GOLD_GLOW}50`}
-        fontSize="8px"
-        letterSpacing="4px"
-        textTransform="uppercase"
-      >
-        BUILT TO COOK
-      </Text>
+        <Text
+          color={`${COLORS.GOLD_GLOW}50`}
+          fontSize="8px"
+          letterSpacing="4px"
+          textTransform="uppercase"
+        >
+          BUILT TO COOK
+        </Text>
+      </VStack>
     </Box>
   )
 }
@@ -314,6 +286,8 @@ export default function AwardsPage() {
   const [hasBegun, setHasBegun] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [isCheckingMatric, setIsCheckingMatric] = useState(false)
+  const [alreadyVoted, setAlreadyVoted] = useState(false)
 
   const [currentStep, setCurrentStep] = useState(0)
   const totalSteps = 1 + AWARD_GROUPS.length + 1
@@ -376,9 +350,26 @@ export default function AwardsPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 0) {
       if (!validateNominatorStep()) return
+      // Check for duplicate matric before proceeding
+      setIsCheckingMatric(true)
+      try {
+        const { data, error } = await supabase
+          .from("award_nominations")
+          .select("id")
+          .eq("nominator_matric", nominator.matricNumber.trim())
+          .limit(1)
+        if (!error && data && data.length > 0) {
+          setAlreadyVoted(true)
+          setIsCheckingMatric(false)
+          return
+        }
+      } catch {
+        // If check fails, allow through — DB will catch dupes on submit
+      }
+      setIsCheckingMatric(false)
     } else if (currentStep >= 1 && currentStep <= AWARD_GROUPS.length) {
       if (!validateCategoryStep(AWARD_GROUPS[currentStep - 1].type)) return
     }
@@ -444,6 +435,86 @@ export default function AwardsPage() {
 
   // ── LANDING ───────────────────────────────────────────────────────────────────
   if (!hasBegun) return <LandingScreen onBegin={() => setHasBegun(true)} />
+
+  // ── ALREADY VOTED ─────────────────────────────────────────────────────────────
+  if (alreadyVoted) {
+    return (
+      <Box
+        minH="100vh"
+        bg={COLORS.BG}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        px={6}
+        position="relative"
+        overflow="hidden"
+      >
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          w="500px"
+          h="500px"
+          borderRadius="full"
+          bg={`radial-gradient(circle, ${COLORS.GOLD_GLOW}10 0%, transparent 70%)`}
+          pointerEvents="none"
+        />
+        <VStack gap={6} textAlign="center" maxW="440px" position="relative">
+          <VStack gap={3}>
+            <Text color={`${COLORS.GOLD_DIM}80`} fontSize="9px" letterSpacing="4px" textTransform="uppercase">
+              Bells University Student Association
+            </Text>
+            <Heading
+              fontFamily="'Cormorant Garamond', serif"
+              color={COLORS.GOLD_BRIGHT}
+              fontSize="3xl"
+              letterSpacing="2px"
+              fontWeight="300"
+            >
+              Already Nominated
+            </Heading>
+          </VStack>
+          <Box w="100%" border={`1px solid ${COLORS.GOLD_DIM}25`} borderRadius="4px" p={6} position="relative">
+            <Box position="absolute" top="-1px" left="-1px" w="12px" h="12px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
+            <Box position="absolute" top="-1px" right="-1px" w="12px" h="12px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
+            <Box position="absolute" bottom="-1px" left="-1px" w="12px" h="12px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
+            <Box position="absolute" bottom="-1px" right="-1px" w="12px" h="12px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
+            <VStack gap={3}>
+              <Text color={`${COLORS.GOLD_DIM}80`} fontSize="sm" lineHeight="1.9">
+                Matric number{" "}
+                <Text as="span" color={COLORS.GOLD_BASE} fontWeight="500">{nominator.matricNumber}</Text>{" "}
+                has already submitted nominations.
+              </Text>
+              <Text color={`${COLORS.GOLD_DIM}60`} fontSize="xs" lineHeight="1.8">
+                Each student may only nominate once. If you believe this is an error, please contact the BUSA team.
+              </Text>
+            </VStack>
+          </Box>
+          <Button
+            onClick={() => { setAlreadyVoted(false); setNominator((p) => ({ ...p, matricNumber: "" })) }}
+            bg="transparent"
+            color={COLORS.GOLD_BASE}
+            border={`1px solid ${COLORS.GOLD_DIM}50`}
+            borderRadius="2px"
+            px={8}
+            py={5}
+            fontSize="xs"
+            letterSpacing="3px"
+            textTransform="uppercase"
+            width="100%"
+            _hover={{ bg: `${COLORS.GOLD_GLOW}10`, borderColor: COLORS.GOLD_BASE }}
+          >
+            Try a Different Matric
+          </Button>
+          <Text color={`${COLORS.GOLD_GLOW}40`} fontSize="8px" letterSpacing="4px" textTransform="uppercase">
+            BUILT TO COOK
+          </Text>
+        </VStack>
+      </Box>
+    )
+  }
 
   // ── SUCCESS ───────────────────────────────────────────────────────────────────
   if (submitted) {
@@ -800,6 +871,7 @@ export default function AwardsPage() {
               border={`1px solid ${COLORS.GOLD_DIM}50`}
               borderRadius="2px"
               onClick={handleNext}
+              loading={isCheckingMatric}
               fontSize="xs"
               letterSpacing="3px"
               textTransform="uppercase"
