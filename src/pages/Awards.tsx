@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
-import { Box, VStack, HStack, Heading, Text, Button, Input, Textarea, Select, Container, Card, CardBody, CardHeader, useToast, Spinner, SimpleGrid } from "@chakra-ui/react"
+import { Box, VStack, HStack, Heading, Text, Button, Input, Textarea, Select, Container, Card, CardBody, CardHeader, Spinner, SimpleGrid } from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
+import { toaster } from "@/components/ui/toaster"
 import type { Database } from "@/lib/supabase"
 
 type AwardCategory = Database["public"]["Tables"]["award_categories"]["Row"]
@@ -19,7 +20,6 @@ export default function AwardsPage() {
   const [selectedCategory, setSelectedCategory] = useState<AwardCategory | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const toast = useToast()
 
   // Form state
   const [formData, setFormData] = useState({

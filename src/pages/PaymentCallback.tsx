@@ -1,3 +1,6 @@
+declare const __SUPABASE_URL__: string
+declare const __SUPABASE_ANON_KEY__: string
+
 import { useEffect, useState } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { Box, Text, Spinner, VStack } from "@chakra-ui/react"
@@ -18,24 +21,55 @@ export default function PaymentCallbackPage() {
   } | null>(null)
 
   useEffect(() => {
-    const transactionRef = params.get("transaction_ref") ?? params.get("squad_ref")
-    const gatewayRef = params.get("gateway_ref")
+    const verifyPayment = async () => {
+      const transactionRef = params.get("transaction_ref") ?? params.get("squad_ref")
+      const gatewayRef = params.get("gateway_ref")
 
-    const raw = sessionStorage.getItem(PENDING_BOOKING_KEY)
-    if (!raw) {
-      setMessage("No pending booking found. Please try booking again.")
-      setStatus("error")
-      return
-    }
+      const raw = sessionStorage.getItem(PENDING_BOOKING_KEY)
+      if (!raw) {
+        setMessage("No pending booking found. Please try booking again.")
+        setStatus("error")
+        return
+      }
 
-    const pending: PendingBooking = JSON.parse(raw)
+      const pending: PendingBooking = JSON.parse(raw)
 
-    if (transactionRef && transactionRef !== pending.reference) {
-      console.warn("Reference mismatch", transactionRef, pending.reference)
-    }
+      if (transactionRef && transactionRef !== pending.reference) {
+        console.warn("Reference mismatch", transactionRef, pending.reference)
+      }
 
-    confirmBooking(pending, gatewayRef ?? transactionRef ?? undefined)
-      .then((result) => {
+      try {
+        // Verify payment was actually successful with Squad
+        setMessage("Verifying payment status…")
+        const verifyRes = await fetch(`${__SUPABASE_URL__}/functions/v1/verify-payment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
+          },
+          body: JSON.stringify({
+            reference: pending.reference,
+            gatewayRef: gatewayRef ?? transactionRef,
+          }),
+        })
+
+        const verifyData = await verifyRes.json()
+
+        if (!verifyRes.ok || !verifyData.success) {
+          setMessage(
+            verifyData.reason === "cancelled"
+              ? "Payment cancelled. Your booking was not confirmed."
+              : verifyData.reason === "failed"
+                ? "Payment failed. Please try again."
+                : "Payment verification failed. Please contact support."
+          )
+          setStatus("error")
+          sessionStorage.removeItem(PENDING_BOOKING_KEY)
+          return
+        }
+
+        // Only confirm booking after payment is verified
+        const result = await confirmBooking(pending, gatewayRef ?? transactionRef ?? undefined)
         sessionStorage.removeItem(PENDING_BOOKING_KEY)
         setSuccessData({
           groupCode: result.groupCode,
@@ -44,16 +78,19 @@ export default function PaymentCallbackPage() {
           quantity: result.quantity,
         })
         setStatus("success")
-      })
-      .catch((err) => {
+      } catch (err: any) {
         if (err.message === "TABLE_FULL") {
           setMessage("Your table has been filled while you were paying. Please contact support.")
         } else {
           setMessage(`Payment verification failed: ${err.message}`)
         }
         setStatus("error")
-      })
-  }, [])
+        sessionStorage.removeItem(PENDING_BOOKING_KEY)
+      }
+    }
+
+    verifyPayment()
+  }, [params])
 
   if (status === "success" && successData) {
     return (
