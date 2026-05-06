@@ -94,7 +94,7 @@ export async function confirmBooking(
     }
   }
 
-  // Trigger confirmation emails (non-blocking)
+  // Trigger confirmation emails (non-blocking - fires immediately after payment)
   fetch(`${__SUPABASE_URL__}/functions/v1/send-confirmation-email`, {
     method: "POST",
     headers: {
@@ -102,7 +102,17 @@ export async function confirmBooking(
       Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
     },
     body: JSON.stringify({ groupCode: pending.groupCode, reference: pending.reference }),
-  }).catch(() => {})
+  })
+    .then((res) => {
+      if (!res.ok) {
+        console.error("[v0] Email edge function returned status:", res.status)
+      } else {
+        console.log("[v0] Confirmation emails triggered successfully for group:", pending.groupCode)
+      }
+    })
+    .catch((err) => {
+      console.error("[v0] Failed to trigger confirmation emails:", err.message)
+    })
 
   return {
     groupCode: pending.groupCode,

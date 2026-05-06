@@ -13,80 +13,6 @@ const FROM_EMAIL = "BUSA Gala <noreply@busagala.com>"
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 
-// Generate OAuth 2.0 token for Google Mail API
-async function getGoogleAccessToken(): Promise<string> {
-  const header = {
-    alg: "RS256",
-    typ: "JWT",
-  }
-
-  const now = Math.floor(Date.now() / 1000)
-  const claim = {
-    iss: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    scope: "https://www.googleapis.com/auth/gmail.send",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: now + 3600,
-    iat: now,
-  }
-
-  const headerEncoded = btoa(JSON.stringify(header)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
-  const claimEncoded = btoa(JSON.stringify(claim)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
-
-  const payload = `${headerEncoded}.${claimEncoded}`
-
-  // Sign with private key using Web Crypto API
-  const encoder = new TextEncoder()
-  const keyData = encoder.encode(GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"))
-  const algorithm = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }
-  const key = await crypto.subtle.importKey("pkcs8", keyData, algorithm, false, ["sign"])
-  const signature = await crypto.subtle.sign(algorithm, key, encoder.encode(payload))
-
-  const signatureEncoded = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "")
-
-  const jwt = `${payload}.${signatureEncoded}`
-
-  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }).toString(),
-  })
-
-  const tokenData = await tokenRes.json()
-  if (!tokenRes.ok || !tokenData.access_token) {
-    throw new Error(`Failed to get Google access token: ${JSON.stringify(tokenData)}`)
-  }
-
-  return tokenData.access_token
-}
-
-// Send email via Gmail API
-async function sendGoogleMail(to: string, subject: string, html: string): Promise<boolean> {
-  const accessToken = await getGoogleAccessToken()
-
-  const message = {
-    raw: btoa(
-      `From: ${FROM_EMAIL}\r\nTo: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset="UTF-8"\r\n\r\n${html}`,
-    ),
-  }
-
-  const gmailRes = await fetch("https://www.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(message),
-  })
-
-  return gmailRes.ok
-}
-
 function buildEmailHtml(params: {
   first_name: string
   last_name: string
@@ -134,8 +60,9 @@ function buildEmailHtml(params: {
     <div class="subtitle">BUSA Dinner &amp; Awards 2026</div>
   </div>
   <div class="body">
-    <div class="greeting">Dear ${first_name} ${last_name},</div>
-    <p class="text">Your ticket has been confirmed. We look forward to welcoming you to an evening of elegance, celebration, and unforgettable memories.</p>
+    <div class="greeting">Welcome to Stardom, ${first_name}.</div>
+    <p class="text">Your payment has been processed, and your ticket is officially confirmed. We&apos;re thrilled to have you join us for The Great Gatsby Gala — an unforgettable evening of elegance, celebration, and timeless memories.</p>
+    <div class="divider"></div>
     <div class="ticket-card">
       <div class="ticket-row">
         <span class="ticket-label">Ticket ID</span>
@@ -158,12 +85,15 @@ function buildEmailHtml(params: {
         <span class="ticket-value">${ticket_count}</span>
       </div>
     </div>
-    <p class="text">You can manage your ticket — including transferring it or updating your details — using the link below.</p>
+    <p class="text"><strong style="color: #C9A84C;">Your Booking Details</strong><br/>Everything you need is right here. Your group code and ticket ID are your VIP passes to an extraordinary night.</p>
     <div style="text-align:center">
-      <a href="${manage_url}" class="btn">Manage My Ticket</a>
+      <a href="${manage_url}" class="btn">Manage Your Booking</a>
     </div>
     <div class="divider"></div>
-    <p class="text" style="font-size:12px; color:#6B5040;">Please bring this email or your ticket ID to the event. Doors open at 6:30 PM. Black tie required.</p>
+    <p class="text" style="font-size:13px; color:#C9A84C; font-weight:600;">A Personal Thank You</p>
+    <p class="text" style="font-size:12px; color:#B8A090; line-height:1.8;">Thank you for choosing to celebrate with us. Your presence makes this gala truly special. From the moment you arrive at our red carpet through the final toast, we&apos;ve curated every detail with you in mind. Get ready to experience an evening of unparalleled elegance and celebration.</p>
+    <div class="divider"></div>
+    <p class="text" style="font-size:12px; color:#6B5040;">📌 <strong>Event Details:</strong> Black tie attire · Doors open 6:30 PM · Bring this email or your Ticket ID. Questions? Contact us at gala@busa.co.uk</p>
   </div>
   <div class="footer">
     <div class="footer-text">Birmingham University Students' Association<br/>The Great Gatsby Gala · BUSA Dinner &amp; Awards 2026</div>
@@ -267,6 +197,7 @@ Deno.serve(async (req: Request) => {
         if (success) {
           results.push({ email: att.email, success: true })
           await supabase.from("attendees").update({ qr_code_sent: true }).eq("id", att.id)
+          console.log(`✓ Email sent to ${att.email}`)
         } else {
           console.error("Gmail send failed for", att.email)
           results.push({ email: att.email, success: false, error: "Gmail API returned error" })
