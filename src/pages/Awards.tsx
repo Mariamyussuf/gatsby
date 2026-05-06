@@ -32,7 +32,7 @@ interface Nomination {
   badge?: string
 }
 
-const MATRIC_REGEX = /^\d{4}\/\d{5}$/
+const MATRIC_REGEX = /^\d{4}\/\d{4,5}$/
 
 // Static award definitions — used for landing display + form structure
 const AWARD_GROUPS = [
@@ -330,7 +330,7 @@ export default function AwardsPage() {
     if (!nominator.matricNumber.trim()) {
       newErrors.matricNumber = "Matric number is required"
     } else if (!MATRIC_REGEX.test(nominator.matricNumber.trim())) {
-      newErrors.matricNumber = "Format must be YYYY/NNNNN — e.g. 2024/12345"
+      newErrors.matricNumber = "Format must be YYYY/NNNN or YYYY/NNNNN — e.g. 2021/9879"
     }
     if (!nominator.email.trim()) {
       newErrors.email = "Email is required"
@@ -688,7 +688,7 @@ export default function AwardsPage() {
                   {...inputStyles} />
               </FormField>
 
-              <FormField label="Matric Number *" hint="Format: 2024/12345" error={errors.matricNumber}>
+              <FormField label="Matric Number *" hint="e.g. 2024/12345 or 2021/9879" error={errors.matricNumber}>
                 <Input placeholder="2024/12345" value={nominator.matricNumber}
                   onChange={(e) => { setNominator({ ...nominator, matricNumber: e.target.value }); setErrors((p) => { const n = { ...p }; delete n.matricNumber; return n }) }}
                   {...inputStyles} />
