@@ -51,6 +51,7 @@ const AWARD_GROUPS = [
   {
     type: "creative",
     name: "Creative Awards",
+    badge: "Next Rated",
     awards: [
       "Photographer of the Year",
       "Graphics Designer of the Year",
@@ -82,6 +83,7 @@ const AWARD_GROUPS = [
   {
     type: "innovation",
     name: "Innovation Awards",
+    badge: "Next Rated",
     awards: [
       "Entrepreneur of the Year",
       "Innovation of the Year",
@@ -99,22 +101,14 @@ const AWARD_GROUPS = [
       "Most Distinguished Executive (Female)",
     ],
   },
-  {
-    type: "next_rated",
-    name: "Next Rated Award",
-    badge: "Next Rated",
-    awards: [
-      "Next Rated",
-    ],
-  },
 ]
 
 const inputStyles = {
-  bg: "transparent" as const,
-  borderColor: "rgba(212,175,55,0.3)",
-  color: "#F5F0E8",
-  _placeholder: { color: "rgba(245,240,232,0.3)" },
-  _focus: { borderColor: "#D4AF37", boxShadow: "0 0 0 1px #D4AF37" },
+  bg: `${COLORS.PANEL_DARK}40` as const,
+  borderColor: `${COLORS.GOLD_DIM}50`,
+  color: COLORS.GOLD_BRIGHT,
+  _placeholder: { color: `${COLORS.GOLD_DIM}60` },
+  _focus: { borderColor: COLORS.GOLD_BASE, boxShadow: `0 0 0 1px ${COLORS.GOLD_BASE}` },
   borderRadius: "2px",
 }
 
@@ -131,12 +125,12 @@ function FormField({
 }) {
   return (
     <Box>
-      <Text color="rgba(245,240,232,0.7)" fontSize="xs" fontWeight="500" mb={1} letterSpacing="0.5px">
+      <Text color={COLORS.GOLD_DIM} fontSize="xs" fontWeight="500" mb={1} letterSpacing="0.5px">
         {label}
       </Text>
-      {hint && <Text color="rgba(245,240,232,0.4)" fontSize="xs" mb={1}>{hint}</Text>}
+      {hint && <Text color={`${COLORS.GOLD_DIM}80`} fontSize="xs" mb={1}>{hint}</Text>}
       {children}
-      {error && <Text color="#FF6B6B" fontSize="xs" mt={1}>{error}</Text>}
+      {error && <Text color={COLORS.CRIMSON} fontSize="xs" mt={1}>{error}</Text>}
     </Box>
   )
 }
@@ -149,7 +143,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
   return (
     <Box
       minH="100vh"
-      bg="#080808"
+      bg={COLORS.BG}
       display="flex"
       flexDirection="column"
       alignItems="center"
@@ -167,7 +161,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         w="600px"
         h="600px"
         borderRadius="full"
-        bg="radial-gradient(circle, rgba(212,175,55,0.06) 0%, transparent 70%)"
+        bg={`radial-gradient(circle, ${COLORS.GOLD_GLOW}15 0%, transparent 70%)`}
         pointerEvents="none"
       />
 
@@ -178,7 +172,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         left="10%"
         right="10%"
         h="1px"
-        bg="linear-gradient(90deg, transparent, rgba(212,175,55,0.4), transparent)"
+        bg={`linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}40, transparent)`}
         style={{
           opacity: visible ? 1 : 0,
           transition: "opacity 1.2s ease 0.2s",
@@ -197,7 +191,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
       >
         <VStack gap={2}>
           <Text
-            color="rgba(212,175,55,0.6)"
+            color={COLORS.GOLD_DIM}
             fontSize="xs"
             letterSpacing="6px"
             textTransform="uppercase"
@@ -206,7 +200,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           </Text>
           <Heading
             fontFamily="'Cormorant Garamond', serif"
-            color="#D4AF37"
+            color={COLORS.GOLD_BRIGHT}
             fontSize={{ base: "4xl", md: "6xl" }}
             letterSpacing="4px"
             fontWeight="300"
@@ -215,7 +209,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
             BUSA AWARDS
           </Heading>
           <Text
-            color="rgba(212,175,55,0.5)"
+            color={COLORS.GOLD_DIM}
             fontSize="xs"
             letterSpacing="4px"
             textTransform="uppercase"
@@ -228,12 +222,12 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         <Box
           w="1px"
           h="48px"
-          bg="linear-gradient(180deg, transparent, rgba(212,175,55,0.5), transparent)"
+          bg={`linear-gradient(180deg, transparent, ${COLORS.GOLD_DIM}50, transparent)`}
           mx="auto"
         />
 
         <Text
-          color="rgba(245,240,232,0.5)"
+          color={COLORS.GOLD_DIM}
           fontSize="sm"
           lineHeight="1.9"
           maxW="420px"
@@ -250,23 +244,23 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
               width="100%"
               py={2}
               px={4}
-              borderLeft="1px solid rgba(212,175,55,0.2)"
+              borderLeft={`1px solid ${COLORS.GOLD_DIM}30`}
               style={{
                 opacity: visible ? 1 : 0,
                 transition: `opacity 0.6s ease ${0.8 + i * 0.1}s`,
               }}
             >
               <HStack justify="space-between">
-                <Text color="rgba(245,240,232,0.5)" fontSize="xs" letterSpacing="1px" textTransform="uppercase">
+                <Text color={COLORS.GOLD_DIM} fontSize="xs" letterSpacing="1px" textTransform="uppercase">
                   {group.name}
                 </Text>
                 {group.badge && (
                   <Text
-                    color="#D4AF37"
+                    color={COLORS.GOLD_BASE}
                     fontSize="9px"
                     letterSpacing="1.5px"
                     textTransform="uppercase"
-                    border="1px solid rgba(212,175,55,0.4)"
+                    border={`1px solid ${COLORS.GOLD_DIM}50`}
                     px={2}
                     py={0.5}
                     borderRadius="2px"
@@ -274,7 +268,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
                     {group.badge}
                   </Text>
                 )}
-                <Text color="rgba(212,175,55,0.4)" fontSize="xs">{group.awards.length} award{group.awards.length !== 1 ? "s" : ""}</Text>
+                <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">{group.awards.length} awards</Text>
               </HStack>
             </Box>
           ))}
@@ -283,8 +277,8 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         <Button
           onClick={onBegin}
           bg="transparent"
-          color="#D4AF37"
-          border="1px solid rgba(212,175,55,0.5)"
+          color={COLORS.GOLD_BASE}
+          border={`1px solid ${COLORS.GOLD_DIM}60`}
           borderRadius="2px"
           px={10}
           py={6}
@@ -292,8 +286,8 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           letterSpacing="4px"
           textTransform="uppercase"
           _hover={{
-            bg: "rgba(212,175,55,0.08)",
-            borderColor: "#D4AF37",
+            bg: `${COLORS.GOLD_GLOW}10`,
+            borderColor: COLORS.GOLD_BASE,
           }}
           style={{
             opacity: visible ? 1 : 0,
@@ -311,7 +305,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         left="10%"
         right="10%"
         h="1px"
-        bg="linear-gradient(90deg, transparent, rgba(212,175,55,0.4), transparent)"
+        bg={`linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}40, transparent)`}
         style={{
           opacity: visible ? 1 : 0,
           transition: "opacity 1.2s ease 0.2s",
@@ -320,7 +314,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
       <Text
         position="absolute"
         bottom="24px"
-        color="rgba(212,175,55,0.25)"
+        color={`${COLORS.GOLD_GLOW}50`}
         fontSize="8px"
         letterSpacing="4px"
         textTransform="uppercase"
@@ -469,15 +463,15 @@ export default function AwardsPage() {
     }
   }
 
-  // ── LANDING ───────────────────────────────────────────────────────────────────
+  // ── LANDING ────────────────────────────────────────────────────────────[...]
   if (!hasBegun) return <LandingScreen onBegin={() => setHasBegun(true)} />
 
-  // ── SUCCESS ───────────────────────────────────────────────────────────────────
+  // ── SUCCESS ────────────────────────────────────────────────────────────[...]
   if (submitted) {
     return (
       <Box
         minH="100vh"
-        bg="#080808"
+        bg={COLORS.BG}
         display="flex"
         flexDirection="column"
         alignItems="center"
@@ -494,24 +488,24 @@ export default function AwardsPage() {
           w="500px"
           h="500px"
           borderRadius="full"
-          bg="radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%)"
+          bg={`radial-gradient(circle, ${COLORS.GOLD_GLOW}15 0%, transparent 70%)`}
           pointerEvents="none"
         />
         <VStack gap={8} textAlign="center" maxW="500px" position="relative">
           <VStack gap={3}>
-            <Text color="rgba(212,175,55,0.5)" fontSize="xs" letterSpacing="4px" textTransform="uppercase">
+            <Text color={COLORS.GOLD_DIM} fontSize="xs" letterSpacing="4px" textTransform="uppercase">
               Nominations Received
             </Text>
             <Heading
               fontFamily="'Cormorant Garamond', serif"
-              color="#D4AF37"
+              color={COLORS.GOLD_BRIGHT}
               fontSize="4xl"
               letterSpacing="2px"
               fontWeight="300"
             >
               Thank You, {nominator.name.split(" ")[0]}.
             </Heading>
-            <Text color="rgba(245,240,232,0.5)" fontSize="sm" lineHeight="1.9" maxW="400px">
+            <Text color={COLORS.GOLD_DIM} fontSize="sm" lineHeight="1.9" maxW="400px">
               Your nominations have been recorded. The people you believe in
               are one step closer to being celebrated.
             </Text>
@@ -519,28 +513,28 @@ export default function AwardsPage() {
 
           <Box
             w="100%"
-            border="1px solid rgba(212,175,55,0.25)"
+            border={`1px solid ${COLORS.GOLD_DIM}30`}
             borderRadius="4px"
             p={6}
           >
             <VStack gap={4}>
-              <Text color="rgba(245,240,232,0.6)" fontSize="sm" lineHeight="1.9">
+              <Text color={COLORS.GOLD_DIM} fontSize="sm" lineHeight="1.9">
                 Now get your tickets and be part of the night it all goes down.
                 <br />
-                <Text as="span" color="#D4AF37">Don't hear about it — be a part of it.</Text>
+                <Text as="span" color={COLORS.GOLD_BASE}>Don't hear about it — be a part of it.</Text>
               </Text>
               <Link href="https://busagreatgatbsy.vercel.app/" target="_blank" _hover={{ textDecoration: "none" }} width="100%">
                 <Button
                   width="100%"
                   bg="transparent"
-                  color="#D4AF37"
-                  border="1px solid rgba(212,175,55,0.5)"
+                  color={COLORS.GOLD_BASE}
+                  border={`1px solid ${COLORS.GOLD_DIM}50`}
                   borderRadius="2px"
                   fontSize="xs"
                   letterSpacing="4px"
                   textTransform="uppercase"
                   py={6}
-                  _hover={{ bg: "rgba(212,175,55,0.08)", borderColor: "#D4AF37" }}
+                  _hover={{ bg: `${COLORS.GOLD_GLOW}10`, borderColor: COLORS.GOLD_BASE }}
                 >
                   Get Your Tickets
                 </Button>
@@ -548,7 +542,7 @@ export default function AwardsPage() {
             </VStack>
           </Box>
 
-          <Text color="rgba(212,175,55,0.2)" fontSize="8px" letterSpacing="4px" textTransform="uppercase">
+          <Text color={`${COLORS.GOLD_GLOW}50`} fontSize="8px" letterSpacing="4px" textTransform="uppercase">
             BUILT TO COOK
           </Text>
         </VStack>
@@ -563,19 +557,19 @@ export default function AwardsPage() {
       ? AWARD_GROUPS[currentStep - 1].name
       : "Review & Submit"
 
-  // ── FORM ──────────────────────────────────────────────────────────────────────
+  // ── FORM ─────────────────────────────────────────────────────────────[...]
   return (
-    <Box minH="100vh" bg="#080808" pt={10} pb={4} display="flex" flexDirection="column">
+    <Box minH="100vh" bg={COLORS.BG} pt={10} pb={4} display="flex" flexDirection="column">
       <Container maxW="680px" flex={1}>
 
         {/* Header */}
         <VStack gap={1} mb={8} textAlign="center">
-          <Text color="rgba(212,175,55,0.5)" fontSize="9px" letterSpacing="5px" textTransform="uppercase">
+          <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="5px" textTransform="uppercase">
             Bells University Student Association
           </Text>
           <Heading
             fontFamily="'Cormorant Garamond', serif"
-            color="#D4AF37"
+            color={COLORS.GOLD_BRIGHT}
             fontSize="3xl"
             letterSpacing="4px"
             fontWeight="300"
@@ -587,20 +581,20 @@ export default function AwardsPage() {
         {/* Progress */}
         <Box mb={8}>
           <HStack justify="space-between" mb={2}>
-            <Text color="rgba(212,175,55,0.5)" fontSize="9px" letterSpacing="2px" textTransform="uppercase">
+            <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="2px" textTransform="uppercase">
               {currentGroupLabel}
             </Text>
-            <Text color="rgba(212,175,55,0.4)" fontSize="9px" letterSpacing="1px">
+            <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="1px">
               {currentStep + 1} / {totalSteps}
             </Text>
           </HStack>
-          <Box w="100%" h="1px" bg="rgba(212,175,55,0.1)" position="relative">
+          <Box w="100%" h="1px" bg={`${COLORS.GOLD_DIM}20`} position="relative">
             <Box
               position="absolute"
               top={0}
               left={0}
               h="1px"
-              bg="#D4AF37"
+              bg={COLORS.GOLD_BASE}
               width={`${progressPercent}%`}
               style={{ transition: "width 0.5s ease" }}
             />
@@ -609,18 +603,18 @@ export default function AwardsPage() {
 
         {/* Card */}
         <Box
-          border="1px solid rgba(212,175,55,0.2)"
+          border={`1px solid ${COLORS.GOLD_DIM}30`}
           borderRadius="4px"
           p={{ base: 5, md: 8 }}
           mb={6}
           position="relative"
-          bg="rgba(255,255,255,0.01)"
+          bg={`${COLORS.PANEL}08`}
         >
           {/* Corner accents */}
-          <Box position="absolute" top="-1px" left="-1px" w="16px" h="16px" borderTop="1px solid #D4AF37" borderLeft="1px solid #D4AF37" />
-          <Box position="absolute" top="-1px" right="-1px" w="16px" h="16px" borderTop="1px solid #D4AF37" borderRight="1px solid #D4AF37" />
-          <Box position="absolute" bottom="-1px" left="-1px" w="16px" h="16px" borderBottom="1px solid #D4AF37" borderLeft="1px solid #D4AF37" />
-          <Box position="absolute" bottom="-1px" right="-1px" w="16px" h="16px" borderBottom="1px solid #D4AF37" borderRight="1px solid #D4AF37" />
+          <Box position="absolute" top="-1px" left="-1px" w="16px" h="16px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
+          <Box position="absolute" top="-1px" right="-1px" w="16px" h="16px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
+          <Box position="absolute" bottom="-1px" left="-1px" w="16px" h="16px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
+          <Box position="absolute" bottom="-1px" right="-1px" w="16px" h="16px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
 
           {/* ── STEP 0: NOMINATOR INFO ── */}
           {currentStep === 0 && (
@@ -628,14 +622,14 @@ export default function AwardsPage() {
               <VStack align="start" gap={1}>
                 <Heading
                   fontFamily="'Cormorant Garamond', serif"
-                  color="#D4AF37"
+                  color={COLORS.GOLD_BASE}
                   fontSize="xl"
                   fontWeight="400"
                   letterSpacing="1px"
                 >
                   Your Information
                 </Heading>
-                <Text color="rgba(245,240,232,0.35)" fontSize="xs">
+                <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">
                   Filled once — attached to all your nominations.
                 </Text>
               </VStack>
@@ -676,7 +670,7 @@ export default function AwardsPage() {
                   <HStack gap={3} align="center">
                     <Heading
                       fontFamily="'Cormorant Garamond', serif"
-                      color="#D4AF37"
+                      color={COLORS.GOLD_BASE}
                       fontSize="xl"
                       fontWeight="400"
                       letterSpacing="1px"
@@ -685,11 +679,11 @@ export default function AwardsPage() {
                     </Heading>
                     {group.badge && (
                       <Text
-                        color="#D4AF37"
+                        color={COLORS.GOLD_BASE}
                         fontSize="8px"
                         letterSpacing="1.5px"
                         textTransform="uppercase"
-                        border="1px solid rgba(212,175,55,0.4)"
+                        border={`1px solid ${COLORS.GOLD_DIM}50`}
                         px={2}
                         py={0.5}
                         borderRadius="2px"
@@ -698,7 +692,7 @@ export default function AwardsPage() {
                       </Text>
                     )}
                   </HStack>
-                  <Text color="rgba(245,240,232,0.35)" fontSize="xs">
+                  <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">
                     Enter the nominee's name for each award below.
                   </Text>
                 </VStack>
@@ -706,12 +700,12 @@ export default function AwardsPage() {
                 {groupNominations.map((nom, i) => (
                   <Box
                     key={`${group.type}_${i}`}
-                    borderLeft="1px solid rgba(212,175,55,0.2)"
+                    borderLeft={`1px solid ${COLORS.GOLD_DIM}30`}
                     pl={4}
                     py={1}
                   >
                     <Text
-                      color="rgba(212,175,55,0.7)"
+                      color={COLORS.GOLD_DIM}
                       fontSize="xs"
                       textTransform="uppercase"
                       letterSpacing="1px"
@@ -739,21 +733,21 @@ export default function AwardsPage() {
               <VStack align="start" gap={1}>
                 <Heading
                   fontFamily="'Cormorant Garamond', serif"
-                  color="#D4AF37"
+                  color={COLORS.GOLD_BASE}
                   fontSize="xl"
                   fontWeight="400"
                   letterSpacing="1px"
                 >
                   Review Your Nominations
                 </Heading>
-                <Text color="rgba(245,240,232,0.35)" fontSize="xs">
+                <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">
                   Use Back to make changes before submitting.
                 </Text>
               </VStack>
 
               {/* Nominator */}
-              <Box borderLeft="1px solid rgba(212,175,55,0.3)" pl={4} py={1}>
-                <Text color="rgba(212,175,55,0.5)" fontSize="9px" letterSpacing="2px" textTransform="uppercase" mb={3}>
+              <Box borderLeft={`1px solid ${COLORS.GOLD_DIM}40`} pl={4} py={1}>
+                <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="2px" textTransform="uppercase" mb={3}>
                   Your Details
                 </Text>
                 <VStack align="start" gap={1}>
@@ -764,8 +758,8 @@ export default function AwardsPage() {
                     ...(nominator.phone ? [["Phone", nominator.phone]] : []),
                   ].map(([label, value]) => (
                     <HStack key={label} gap={3}>
-                      <Text color="rgba(245,240,232,0.35)" fontSize="xs" minW="48px">{label}</Text>
-                      <Text color="rgba(245,240,232,0.8)" fontSize="xs">{value}</Text>
+                      <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs" minW="48px">{label}</Text>
+                      <Text color={COLORS.GOLD_BRIGHT} fontSize="xs">{value}</Text>
                     </HStack>
                   ))}
                 </VStack>
@@ -773,18 +767,18 @@ export default function AwardsPage() {
 
               {/* All nominations */}
               {AWARD_GROUPS.map((group) => (
-                <Box key={group.type} borderLeft="1px solid rgba(212,175,55,0.2)" pl={4} py={1}>
+                <Box key={group.type} borderLeft={`1px solid ${COLORS.GOLD_DIM}30`} pl={4} py={1}>
                   <HStack gap={3} mb={3} align="center">
-                    <Text color="rgba(212,175,55,0.5)" fontSize="9px" letterSpacing="2px" textTransform="uppercase">
+                    <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="2px" textTransform="uppercase">
                       {group.name}
                     </Text>
                     {group.badge && (
                       <Text
-                        color="rgba(212,175,55,0.5)"
+                        color={COLORS.GOLD_DIM}
                         fontSize="8px"
                         letterSpacing="1px"
                         textTransform="uppercase"
-                        border="1px solid rgba(212,175,55,0.2)"
+                        border={`1px solid ${COLORS.GOLD_DIM}30`}
                         px={1.5}
                         borderRadius="2px"
                       >
@@ -795,8 +789,8 @@ export default function AwardsPage() {
                   <VStack gap={2} align="stretch">
                     {(nominations[group.type] || []).map((nom, i) => (
                       <HStack key={i} justify="space-between" align="start">
-                        <Text color="rgba(245,240,232,0.35)" fontSize="xs" flex={1} pr={4}>{nom.categoryName}</Text>
-                        <Text color="rgba(245,240,232,0.8)" fontSize="xs" fontWeight="500" textAlign="right">{nom.nomineeName}</Text>
+                        <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs" flex={1} pr={4}>{nom.categoryName}</Text>
+                        <Text color={COLORS.GOLD_BRIGHT} fontSize="xs" fontWeight="500" textAlign="right">{nom.nomineeName}</Text>
                       </HStack>
                     ))}
                   </VStack>
@@ -810,13 +804,13 @@ export default function AwardsPage() {
         <HStack justify="space-between" gap={4} mb={12}>
           <Button
             variant="ghost"
-            color="rgba(212,175,55,0.4)"
+            color={COLORS.GOLD_DIM}
             onClick={handleBack}
             visibility={currentStep === 0 ? "hidden" : "visible"}
             fontSize="xs"
             letterSpacing="2px"
             textTransform="uppercase"
-            _hover={{ color: "#D4AF37", bg: "transparent" }}
+            _hover={{ color: COLORS.GOLD_BASE, bg: "transparent" }}
             px={0}
           >
             ← Back
@@ -825,8 +819,8 @@ export default function AwardsPage() {
           {currentStep < totalSteps - 1 ? (
             <Button
               bg="transparent"
-              color="#D4AF37"
-              border="1px solid rgba(212,175,55,0.4)"
+              color={COLORS.GOLD_BASE}
+              border={`1px solid ${COLORS.GOLD_DIM}50`}
               borderRadius="2px"
               onClick={handleNext}
               fontSize="xs"
@@ -834,15 +828,15 @@ export default function AwardsPage() {
               textTransform="uppercase"
               px={8}
               py={5}
-              _hover={{ bg: "rgba(212,175,55,0.08)", borderColor: "#D4AF37" }}
+              _hover={{ bg: `${COLORS.GOLD_GLOW}10`, borderColor: COLORS.GOLD_BASE }}
             >
               Continue
             </Button>
           ) : (
             <Button
-              bg="rgba(212,175,55,0.12)"
-              color="#D4AF37"
-              border="1px solid rgba(212,175,55,0.5)"
+              bg={`${COLORS.GOLD_GLOW}15`}
+              color={COLORS.GOLD_BASE}
+              border={`1px solid ${COLORS.GOLD_DIM}60`}
               borderRadius="2px"
               loading={isSubmitting}
               onClick={handleSubmit}
@@ -851,7 +845,7 @@ export default function AwardsPage() {
               textTransform="uppercase"
               px={8}
               py={5}
-              _hover={{ bg: "rgba(212,175,55,0.18)", borderColor: "#D4AF37" }}
+              _hover={{ bg: `${COLORS.GOLD_GLOW}25`, borderColor: COLORS.GOLD_BASE }}
             >
               Submit Nominations
             </Button>
@@ -860,8 +854,8 @@ export default function AwardsPage() {
       </Container>
 
       {/* Footer */}
-      <Box borderTop="1px solid rgba(212,175,55,0.1)" py={5} textAlign="center">
-        <Text color="rgba(212,175,55,0.2)" fontSize="8px" letterSpacing="5px" textTransform="uppercase">
+      <Box borderTop={`1px solid ${COLORS.GOLD_DIM}20`} py={5} textAlign="center">
+        <Text color={`${COLORS.GOLD_GLOW}50`} fontSize="8px" letterSpacing="5px" textTransform="uppercase">
           BUILT TO COOK
         </Text>
       </Box>
