@@ -51,7 +51,6 @@ const AWARD_GROUPS = [
   {
     type: "creative",
     name: "Creative Awards",
-    badge: "Next Rated",
     awards: [
       "Photographer of the Year",
       "Graphics Designer of the Year",
@@ -83,7 +82,6 @@ const AWARD_GROUPS = [
   {
     type: "innovation",
     name: "Innovation Awards",
-    badge: "Next Rated",
     awards: [
       "Entrepreneur of the Year",
       "Innovation of the Year",
@@ -99,6 +97,14 @@ const AWARD_GROUPS = [
       "Staff Advisors Award",
       "Most Distinguished Executive (Male)",
       "Most Distinguished Executive (Female)",
+    ],
+  },
+  {
+    type: "next_rated",
+    name: "Next Rated Award",
+    badge: "Next Rated",
+    awards: [
+      "Next Rated",
     ],
   },
 ]
@@ -268,7 +274,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
                     {group.badge}
                   </Text>
                 )}
-                <Text color="rgba(212,175,55,0.4)" fontSize="xs">{group.awards.length} awards</Text>
+                <Text color="rgba(212,175,55,0.4)" fontSize="xs">{group.awards.length} award{group.awards.length !== 1 ? "s" : ""}</Text>
               </HStack>
             </Box>
           ))}
