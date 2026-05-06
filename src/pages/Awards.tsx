@@ -67,12 +67,11 @@ export default function AwardsPage() {
       setCategories(grouped)
     } catch (error) {
       console.error("Failed to load categories:", error)
-      toast({
+      toaster.create({
         title: "Error",
         description: "Failed to load award categories",
-        status: "error",
+        type: "error",
         duration: 5,
-        isClosable: true,
       })
     } finally {
       setIsLoading(false)
@@ -83,21 +82,19 @@ export default function AwardsPage() {
     e.preventDefault()
 
     if (!selectedCategory) {
-      toast({
+      toaster.create({
         title: "Please select an award category",
-        status: "warning",
+        type: "warning",
         duration: 3,
-        isClosable: true,
       })
       return
     }
 
     if (!formData.nomineeName || !formData.nominatorName || !formData.nominationReason) {
-      toast({
+      toaster.create({
         title: "Please fill in all required fields",
-        status: "warning",
+        type: "warning",
         duration: 3,
-        isClosable: true,
       })
       return
     }
@@ -119,12 +116,11 @@ export default function AwardsPage() {
 
       if (error) throw error
 
-      toast({
+      toaster.create({
         title: "Nomination submitted successfully!",
         description: "Thank you for nominating an outstanding individual.",
-        status: "success",
+        type: "success",
         duration: 5,
-        isClosable: true,
       })
 
       // Reset form
@@ -141,12 +137,11 @@ export default function AwardsPage() {
       setSelectedCategory(null)
     } catch (error) {
       console.error("Submission error:", error)
-      toast({
+      toaster.create({
         title: "Error",
         description: "Failed to submit nomination",
-        status: "error",
+        type: "error",
         duration: 5,
-        isClosable: true,
       })
     } finally {
       setIsSubmitting(false)
