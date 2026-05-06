@@ -155,6 +155,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
       position="relative"
       overflow="hidden"
       px={6}
+      py="100px"
     >
       {/* Ambient glow */}
       <Box
