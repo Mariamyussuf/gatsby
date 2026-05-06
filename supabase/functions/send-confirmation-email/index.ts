@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from "npm:@supabase/supabase-js@2"
+import { createClient } from "jsr:@supabase/supabase-js@2"
+import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,8 +8,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, apikey",
 }
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? ""
-const FROM_EMAIL = "BUSA Gala <noreply@busagala.com>"
+const GMAIL_USER = "temitopeyr@gmail.com"
+const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD") ?? ""
+const FROM_EMAIL = `BUSA Gala <${GMAIL_USER}>`
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 
@@ -114,66 +116,50 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Use service role to bypass RLS and look up all attendees for this booking
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // Fetch attendees by group code (preferred) or fall back to reference lookup
-    let attendeeRows: any[] = []
+    let attendeesQuery = supabase
+      .from("attendees")
+      .select(`
+        id, first_name, last_name, email, ticket_id, manage_token,
+        table_number, group_booking_code,
+        tier:ticket_tiers(name),
+        transaction:transactions!inner(quantity, reference)
+      `)
+
     if (groupCode) {
-      const { data, error } = await supabase
-        .from("attendees")
-        .select("id, first_name, last_name, email, ticket_id, manage_token, table_number, group_booking_code, tier_id, transaction_id")
-        .eq("group_booking_code", groupCode)
-      if (error) throw new Error(`DB attendees lookup failed: ${error.message}`)
-      attendeeRows = data ?? []
-    } else if (reference) {
-      const { data: txn } = await supabase
-        .from("transactions")
-        .select("id, group_booking_code, quantity")
-        .eq("reference", reference)
-        .single()
-      if (txn) {
-        const { data, error } = await supabase
-          .from("attendees")
-          .select("id, first_name, last_name, email, ticket_id, manage_token, table_number, group_booking_code, tier_id, transaction_id")
-          .eq("group_booking_code", txn.group_booking_code)
-        if (error) throw new Error(`DB attendees lookup failed: ${error.message}`)
-        attendeeRows = data ?? []
-      }
+      attendeesQuery = attendeesQuery.eq("group_booking_code", groupCode)
+    } else {
+      attendeesQuery = attendeesQuery.eq("transaction.reference", reference)
     }
 
-    if (attendeeRows.length === 0) {
+    const { data: attendees, error: fetchErr } = await attendeesQuery
+
+    if (fetchErr || !attendees || attendees.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No attendees found for this booking" }),
+        JSON.stringify({ error: "No attendees found", details: fetchErr?.message }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
 
-    if (!RESEND_API_KEY) {
+    if (!GMAIL_APP_PASSWORD) {
       return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured — add it in Supabase Dashboard → Settings → Edge Functions → Secrets" }),
+        JSON.stringify({ error: "GMAIL_APP_PASSWORD not configured in Supabase secrets" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
 
-    // Look up tier name once (all attendees in a group share the same tier)
-    const { data: tierRow } = await supabase
-      .from("ticket_tiers")
-      .select("name")
-      .eq("id", attendeeRows[0].tier_id)
-      .single()
-    const tier_name = tierRow?.name ?? "Regular"
-    const ticket_count = attendeeRows.length
-
     const baseUrl = base_url ?? "https://busagala.com"
     const results: { email: string; success: boolean; error?: string }[] = []
 
-    for (const att of attendeeRows) {
+    for (const att of attendees) {
       const manage_url = `${baseUrl}/manage/${att.manage_token}`
+      const tier_name = (att.tier as any)?.name ?? "Regular"
+      const ticket_count = (att.transaction as any)?.quantity ?? attendees.length
 
       const html = buildEmailHtml({
         first_name: att.first_name,
-        last_name: att.last_name ?? att.first_name,
+        last_name: att.last_name,
         tier_name,
         table_number: att.table_number,
         ticket_count,
@@ -182,28 +168,34 @@ Deno.serve(async (req: Request) => {
         manage_url,
       })
 
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      try {
+        const client = new SMTPClient({
+          connection: {
+            hostname: "smtp.gmail.com",
+            port: 465,
+            tls: true,
+            auth: {
+              username: GMAIL_USER,
+              password: GMAIL_APP_PASSWORD,
+            },
+          },
+        })
+
+        await client.send({
           from: FROM_EMAIL,
-          to: [att.email],
+          to: att.email,
           subject: `✦ Your Gatsby Gala Ticket — ${tier_name} · Table ${att.table_number}`,
           html,
-        }),
-      })
+        })
 
-      const resendData = await resendRes.json()
+        await client.close()
 
-      if (resendRes.ok) {
         results.push({ email: att.email, success: true })
         await supabase.from("attendees").update({ qr_code_sent: true }).eq("id", att.id)
-      } else {
-        console.error("Resend error for", att.email, resendData)
-        results.push({ email: att.email, success: false, error: JSON.stringify(resendData) })
+      } catch (mailErr: unknown) {
+        const errMsg = mailErr instanceof Error ? mailErr.message : String(mailErr)
+        console.error("SMTP error for", att.email, errMsg)
+        results.push({ email: att.email, success: false, error: errMsg })
       }
     }
 
