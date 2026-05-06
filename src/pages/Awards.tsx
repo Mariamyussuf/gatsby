@@ -51,7 +51,6 @@ const AWARD_GROUPS = [
   {
     type: "creative",
     name: "Creative Awards",
-    badge: "Next Rated",
     awards: [
       "Photographer of the Year",
       "Graphics Designer of the Year",
@@ -83,7 +82,6 @@ const AWARD_GROUPS = [
   {
     type: "innovation",
     name: "Innovation Awards",
-    badge: "Next Rated",
     awards: [
       "Entrepreneur of the Year",
       "Innovation of the Year",
@@ -100,6 +98,12 @@ const AWARD_GROUPS = [
       "Most Distinguished Executive (Male)",
       "Most Distinguished Executive (Female)",
     ],
+  },
+  {
+    type: "next_rated",
+    name: "Next Rated Award",
+    badge: "Next Rated",
+    awards: ["Next Rated"],
   },
 ]
 
@@ -173,10 +177,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         right="10%"
         h="1px"
         bg={`linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}40, transparent)`}
-        style={{
-          opacity: visible ? 1 : 0,
-          transition: "opacity 1.2s ease 0.2s",
-        }}
+        style={{ opacity: visible ? 1 : 0, transition: "opacity 1.2s ease 0.2s" }}
       />
 
       <VStack
@@ -190,12 +191,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         }}
       >
         <VStack gap={2}>
-          <Text
-            color={COLORS.GOLD_DIM}
-            fontSize="xs"
-            letterSpacing="6px"
-            textTransform="uppercase"
-          >
+          <Text color={COLORS.GOLD_DIM} fontSize="xs" letterSpacing="6px" textTransform="uppercase">
             Bells University Student Association
           </Text>
           <Heading
@@ -215,7 +211,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
             textTransform="uppercase"
             mt={1}
           >
-            2024 / 2025
+            THE GREAT GATSBY GALA
           </Text>
         </VStack>
 
@@ -226,12 +222,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           mx="auto"
         />
 
-        <Text
-          color={COLORS.GOLD_DIM}
-          fontSize="sm"
-          lineHeight="1.9"
-          maxW="420px"
-        >
+        <Text color={COLORS.GOLD_DIM} fontSize="sm" lineHeight="1.9" maxW="420px">
           Six categories. One night. The people who moved, created, led, and inspired —
           it's time to put their names forward.
         </Text>
@@ -268,7 +259,9 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
                     {group.badge}
                   </Text>
                 )}
-                <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">{group.awards.length} awards</Text>
+                <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">
+                  {group.awards.length} award{group.awards.length !== 1 ? "s" : ""}
+                </Text>
               </HStack>
             </Box>
           ))}
@@ -285,14 +278,8 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           fontSize="xs"
           letterSpacing="4px"
           textTransform="uppercase"
-          _hover={{
-            bg: `${COLORS.GOLD_GLOW}10`,
-            borderColor: COLORS.GOLD_BASE,
-          }}
-          style={{
-            opacity: visible ? 1 : 0,
-            transition: "opacity 0.6s ease 1.6s",
-          }}
+          _hover={{ bg: `${COLORS.GOLD_GLOW}10`, borderColor: COLORS.GOLD_BASE }}
+          style={{ opacity: visible ? 1 : 0, transition: "opacity 0.6s ease 1.6s" }}
         >
           Begin Nominations
         </Button>
@@ -306,10 +293,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
         right="10%"
         h="1px"
         bg={`linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}40, transparent)`}
-        style={{
-          opacity: visible ? 1 : 0,
-          transition: "opacity 1.2s ease 0.2s",
-        }}
+        style={{ opacity: visible ? 1 : 0, transition: "opacity 1.2s ease 0.2s" }}
       />
       <Text
         position="absolute"
@@ -330,7 +314,6 @@ export default function AwardsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  // currentStep: 0 = nominator info, 1..N = category groups, N+1 = review
   const [currentStep, setCurrentStep] = useState(0)
   const totalSteps = 1 + AWARD_GROUPS.length + 1
 
@@ -341,14 +324,11 @@ export default function AwardsPage() {
     phone: "",
   })
 
-  // nominations[groupType][i] = { categoryId, categoryName, nomineeName }
-  // Since we don't load from Supabase dynamically for the form structure,
-  // we use static award names as categoryId keys and sync with DB categories on submit
   const [nominations, setNominations] = useState<Record<string, Nomination[]>>(() => {
     const init: Record<string, Nomination[]> = {}
     AWARD_GROUPS.forEach((group) => {
       init[group.type] = group.awards.map((award) => ({
-        categoryId: "", // will be resolved on submit via DB lookup
+        categoryId: "",
         categoryName: award,
         nomineeName: "",
         badge: group.badge,
@@ -361,7 +341,6 @@ export default function AwardsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    // Load DB categories in background for submit-time ID resolution
     supabase
       .from("award_categories")
       .select("*")
@@ -431,7 +410,6 @@ export default function AwardsPage() {
       const allNominations = Object.values(nominations).flat()
 
       const inserts = allNominations.map((nom) => {
-        // Match by name to DB category id
         const dbCat = dbCategories.find(
           (c) => c.name.toLowerCase().trim() === nom.categoryName.toLowerCase().trim()
         )
@@ -463,10 +441,10 @@ export default function AwardsPage() {
     }
   }
 
-  // ── LANDING ────────────────────────────────────────────────────────────[...]
+  // ── LANDING ───────────────────────────────────────────────────────────────────
   if (!hasBegun) return <LandingScreen onBegin={() => setHasBegun(true)} />
 
-  // ── SUCCESS ────────────────────────────────────────────────────────────[...]
+  // ── SUCCESS ───────────────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <Box
@@ -511,12 +489,7 @@ export default function AwardsPage() {
             </Text>
           </VStack>
 
-          <Box
-            w="100%"
-            border={`1px solid ${COLORS.GOLD_DIM}30`}
-            borderRadius="4px"
-            p={6}
-          >
+          <Box w="100%" border={`1px solid ${COLORS.GOLD_DIM}30`} borderRadius="4px" p={6}>
             <VStack gap={4}>
               <Text color={COLORS.GOLD_DIM} fontSize="sm" lineHeight="1.9">
                 Now get your tickets and be part of the night it all goes down.
@@ -557,7 +530,7 @@ export default function AwardsPage() {
       ? AWARD_GROUPS[currentStep - 1].name
       : "Review & Submit"
 
-  // ── FORM ─────────────────────────────────────────────────────────────[...]
+  // ── FORM ──────────────────────────────────────────────────────────────────────
   return (
     <Box minH="100vh" bg={COLORS.BG} pt={10} pb={4} display="flex" flexDirection="column">
       <Container maxW="680px" flex={1}>
@@ -576,6 +549,9 @@ export default function AwardsPage() {
           >
             BUSA AWARDS
           </Heading>
+          <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="3px" textTransform="uppercase" mt={1}>
+            THE GREAT GATSBY GALA
+          </Text>
         </VStack>
 
         {/* Progress */}
