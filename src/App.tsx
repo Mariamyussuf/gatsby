@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom"
 import { Box } from "@chakra-ui/react"
+import { Analytics } from "@vercel/analytics/react"
 import { Toaster } from "@/components/ui/toaster"
 import { COLORS } from "@/config/constants"
 import HomePage from "@/pages/Home"
@@ -20,6 +21,7 @@ function App() {
         <Route path="/manage/:manageToken" element={<ManageTicketPage />} />
         <Route path="/payment/callback" element={<PaymentCallbackPage />} />
       </Routes>
+      <Analytics />
     </Box>
   )
 }
