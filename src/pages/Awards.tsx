@@ -9,9 +9,7 @@ import {
   Input,
   Textarea,
   Container,
-  Card,
   Spinner,
-  SimpleGrid,
 } from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
@@ -28,25 +26,94 @@ interface AwardsByType {
   innovation: AwardCategory[]
 }
 
+interface NominatorInfo {
+  name: string
+  matricNumber: string
+  email: string
+  phone: string
+}
+
+interface CategoryNomination {
+  categoryId: string
+  categoryName: string
+  nomineeName: string
+  nomineeMatric: string
+  nominationReason: string
+}
+
+const MATRIC_REGEX = /^\d{4}\/\d{5}$/
+
+const categoryGroups = [
+  { name: "Social Awards", type: "social" as const, emoji: "👥" },
+  { name: "Creative Awards", type: "creative" as const, emoji: "🎨" },
+  { name: "Sports Awards", type: "sports" as const, emoji: "⚽" },
+  { name: "Entertainment Awards", type: "entertainment" as const, emoji: "🎭" },
+  { name: "Innovation Awards", type: "innovation" as const, emoji: "💡" },
+]
+
+// Shared input styling
+const inputStyles = {
+  bg: "transparent" as const,
+  borderColor: COLORS.GOLD_DIM,
+  color: COLORS.TEXT,
+  _placeholder: { color: COLORS.TEXT_DIM },
+  _focus: { borderColor: COLORS.GOLD_BRIGHT, boxShadow: "none" },
+}
+
+// Form field wrapper component
+function FormField({
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string
+  hint?: string
+  error?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Box>
+      <Text color={COLORS.TEXT} fontSize="sm" fontWeight="500" mb={1}>
+        {label}
+      </Text>
+      {hint && (
+        <Text color={COLORS.TEXT_DIM} fontSize="xs" mb={1}>
+          {hint}
+        </Text>
+      )}
+      {children}
+      {error && (
+        <Text color="#FF6B6B" fontSize="xs" mt={1}>
+          {error}
+        </Text>
+      )}
+    </Box>
+  )
+}
+
 export default function AwardsPage() {
   const [categories, setCategories] = useState<AwardsByType | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<AwardCategory | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
-  // Form state
-  const [formData, setFormData] = useState({
-    nomineeName: "",
-    nomineeEmail: "",
-    nomineePhone: "",
-    nominatorName: "",
-    nominatorEmail: "",
-    nominatorPhone: "",
-    nominationReason: "",
-    evidenceLink: "",
+  // Step 0 = nominator info
+  // Steps 1..categoryGroups.length = one per category group
+  // Final step = review & submit
+  const [currentStep, setCurrentStep] = useState(0)
+  const totalSteps = 1 + categoryGroups.length + 1
+
+  const [nominator, setNominator] = useState<NominatorInfo>({
+    name: "",
+    matricNumber: "",
+    email: "",
+    phone: "",
   })
 
-  // Load categories on mount
+  const [nominations, setNominations] = useState<Record<string, CategoryNomination[]>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
   useEffect(() => {
     loadCategories()
   }, [])
@@ -61,7 +128,6 @@ export default function AwardsPage() {
 
       if (error) throw error
 
-      // Group categories by type
       const grouped: AwardsByType = {
         social: [],
         creative: [],
@@ -72,17 +138,28 @@ export default function AwardsPage() {
 
       data?.forEach((cat) => {
         const type = cat.category_type as keyof AwardsByType
-        if (type in grouped) {
-          grouped[type].push(cat)
-        }
+        if (type in grouped) grouped[type].push(cat)
       })
 
       setCategories(grouped)
+
+      // Pre-populate nominations per category group
+      const initialNominations: Record<string, CategoryNomination[]> = {}
+      categoryGroups.forEach((group) => {
+        const cats = grouped[group.type] || []
+        initialNominations[group.type] = cats.map((cat) => ({
+          categoryId: cat.id,
+          categoryName: cat.name,
+          nomineeName: "",
+          nomineeMatric: "",
+          nominationReason: "",
+        }))
+      })
+      setNominations(initialNominations)
     } catch (error) {
       console.error("Failed to load categories:", error)
       toaster.create({
-        title: "Error",
-        description: "Failed to load award categories",
+        title: "Error loading categories",
         type: "error",
         duration: 5000,
       })
@@ -91,58 +168,105 @@ export default function AwardsPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const progressPercent = Math.round((currentStep / (totalSteps - 1)) * 100)
 
-    if (!selectedCategory) {
-      toaster.create({
-        title: "Please select an award category",
-        type: "warning",
-        duration: 3000,
-      })
-      return
+  const validateNominatorStep = () => {
+    const newErrors: Record<string, string> = {}
+    if (!nominator.name.trim()) newErrors.name = "Name is required"
+    if (!nominator.matricNumber.trim()) {
+      newErrors.matricNumber = "Matric number is required"
+    } else if (!MATRIC_REGEX.test(nominator.matricNumber.trim())) {
+      newErrors.matricNumber = "Format must be YYYY/NNNNN — e.g. 2024/12345"
     }
-
-    if (!formData.nomineeName || !formData.nominatorName || !formData.nominationReason) {
-      toaster.create({
-        title: "Please fill in all required fields",
-        type: "warning",
-        duration: 3000,
-      })
-      return
+    if (!nominator.email.trim()) {
+      newErrors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nominator.email)) {
+      newErrors.email = "Enter a valid email address"
     }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
+  const validateCategoryStep = (groupType: string) => {
+    const newErrors: Record<string, string> = {}
+    const groupNominations = nominations[groupType] || []
+    groupNominations.forEach((nom, i) => {
+      if (!nom.nomineeName.trim()) newErrors[`${groupType}_${i}_name`] = "Nominee name is required"
+      if (!nom.nomineeMatric.trim()) {
+        newErrors[`${groupType}_${i}_matric`] = "Matric number is required"
+      } else if (!MATRIC_REGEX.test(nom.nomineeMatric.trim())) {
+        newErrors[`${groupType}_${i}_matric`] = "Format must be YYYY/NNNNN — e.g. 2024/12345"
+      }
+      if (!nom.nominationReason.trim()) newErrors[`${groupType}_${i}_reason`] = "Please provide a reason"
+    })
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleNext = () => {
+    if (currentStep === 0) {
+      if (!validateNominatorStep()) return
+    } else if (currentStep >= 1 && currentStep <= categoryGroups.length) {
+      const group = categoryGroups[currentStep - 1]
+      if (!validateCategoryStep(group.type)) return
+    }
+    setCurrentStep((s) => s + 1)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleBack = () => {
+    setErrors({})
+    setCurrentStep((s) => s - 1)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const updateNomination = (
+    groupType: string,
+    index: number,
+    field: keyof CategoryNomination,
+    value: string
+  ) => {
+    setNominations((prev) => {
+      const updated = [...(prev[groupType] || [])]
+      updated[index] = { ...updated[index], [field]: value }
+      return { ...prev, [groupType]: updated }
+    })
+    const errorKey =
+      field === "nomineeName"
+        ? `${groupType}_${index}_name`
+        : field === "nomineeMatric"
+        ? `${groupType}_${index}_matric`
+        : `${groupType}_${index}_reason`
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next[errorKey]
+      return next
+    })
+  }
+
+  const handleSubmit = async () => {
     try {
       setIsSubmitting(true)
+      const allNominations = Object.values(nominations).flat()
+      const inserts = allNominations.map((nom) => ({
+        award_category_id: nom.categoryId,
+        nominee_name: nom.nomineeName,
+        nominee_matric: nom.nomineeMatric,
+        nominator_name: nominator.name,
+        nominator_email: nominator.email,
+        nominator_matric: nominator.matricNumber,
+        nominator_phone: nominator.phone || null,
+        nomination_reason: nom.nominationReason,
+      }))
 
-      const { error } = await supabase.from("award_nominations").insert({
-        award_category_id: selectedCategory.id,
-        nominee_name: formData.nomineeName,
-        nominee_email: formData.nomineeEmail || null,
-        nominee_phone: formData.nomineePhone || null,
-        nominator_name: formData.nominatorName,
-        nominator_email: formData.nominatorEmail,
-        nominator_phone: formData.nominatorPhone || null,
-        nomination_reason: formData.nominationReason,
-        evidence_link: formData.evidenceLink || null,
-      })
-
+      const { error } = await supabase.from("award_nominations").insert(inserts)
       if (error) throw error
-
-      toaster.create({
-        title: "Nomination submitted successfully!",
-        description: "Thank you for nominating an outstanding individual.",
-        type: "success",
-        duration: 5000,
-      })
-
-      // Reset form
-      resetForm()
+      setSubmitted(true)
     } catch (error) {
       console.error("Submission error:", error)
       toaster.create({
-        title: "Error",
-        description: "Failed to submit nomination",
+        title: "Submission failed",
+        description: "Please try again.",
         type: "error",
         duration: 5000,
       })
@@ -151,28 +275,7 @@ export default function AwardsPage() {
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      nomineeName: "",
-      nomineeEmail: "",
-      nomineePhone: "",
-      nominatorName: "",
-      nominatorEmail: "",
-      nominatorPhone: "",
-      nominationReason: "",
-      evidenceLink: "",
-    })
-    setSelectedCategory(null)
-  }
-
-  const categoryGroups = [
-    { name: "Social Awards", type: "social" as const, emoji: "👥" },
-    { name: "Creative Awards", type: "creative" as const, emoji: "🎨" },
-    { name: "Sports Awards", type: "sports" as const, emoji: "⚽" },
-    { name: "Entertainment Awards", type: "entertainment" as const, emoji: "🎭" },
-    { name: "Innovation Awards", type: "innovation" as const, emoji: "💡" },
-  ]
-
+  // ── LOADING ───────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <Box minH="100vh" bg={COLORS.BG} display="flex" alignItems="center" justifyContent="center">
@@ -184,225 +287,398 @@ export default function AwardsPage() {
     )
   }
 
-  return (
-    <Box minH="100vh" bg={COLORS.BG} pt={12} pb={12}>
-      <Container maxW="1200px">
-        {/* Header */}
-        <VStack gap={8} mb={12} textAlign="center">
+  // ── SUCCESS ───────────────────────────────────────────────────────────────────
+  if (submitted) {
+    return (
+      <Box minH="100vh" bg={COLORS.BG} display="flex" alignItems="center" justifyContent="center">
+        <VStack gap={6} textAlign="center" px={6}>
+          <Text fontSize="5xl">🏆</Text>
           <Heading
-            as="h1"
-            fontSize="4xl"
             fontFamily="'Cormorant Garamond', serif"
             color={COLORS.GOLD_BRIGHT}
+            fontSize="3xl"
+            letterSpacing="1px"
+          >
+            Nominations Submitted!
+          </Heading>
+          <Text color={COLORS.TEXT} maxW="480px" fontSize="md">
+            Thank you, {nominator.name.split(" ")[0]}. Your nominations have been recorded across all{" "}
+            {categoryGroups.length} categories.
+          </Text>
+        </VStack>
+      </Box>
+    )
+  }
+
+  const currentGroupLabel =
+    currentStep === 0
+      ? "Your Info"
+      : currentStep <= categoryGroups.length
+      ? `${categoryGroups[currentStep - 1].emoji} ${categoryGroups[currentStep - 1].name}`
+      : "Review & Submit"
+
+  // ── MAIN RENDER ───────────────────────────────────────────────────────────────
+  return (
+    <Box minH="100vh" bg={COLORS.BG} pt={12} pb={20}>
+      <Container maxW="680px">
+        {/* Page Header */}
+        <VStack gap={3} mb={10} textAlign="center">
+          <Heading
+            fontFamily="'Cormorant Garamond', serif"
+            color={COLORS.GOLD_BRIGHT}
+            fontSize="4xl"
             letterSpacing="2px"
           >
             BUSA AWARDS
           </Heading>
-          <Text color={COLORS.TEXT} fontSize="lg" maxW="600px">
-            Celebrate excellence and nominate your peers for their outstanding achievements across multiple categories.
+          <Text color={COLORS.TEXT_DIM} fontSize="sm" maxW="480px">
+            Fill in your information once, then nominate peers across all award categories.
           </Text>
         </VStack>
 
-        {/* Category Grid */}
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6} mb={16}>
-          {categoryGroups.map((group) => {
-            const categoryList = categories?.[group.type] || []
-            return (
-              <Card.Root key={group.type} bg={COLORS.PANEL_DARK} borderColor={COLORS.GOLD_DIM} borderWidth="1px">
-                <Card.Header pb={2}>
-                  <Heading size="md" color={COLORS.GOLD_BRIGHT}>
-                    {group.emoji} {group.name}
-                  </Heading>
-                </Card.Header>
-                <Card.Body pt={2}>
-                  <VStack align="start" gap={2}>
-                    {categoryList.map((cat) => (
-                      <Button
-                        key={cat.id}
-                        size="sm"
-                        variant={selectedCategory?.id === cat.id ? "solid" : "outline"}
-                        onClick={() => setSelectedCategory(cat)}
-                        bg={selectedCategory?.id === cat.id ? COLORS.GOLD_BRIGHT : "transparent"}
-                        color={selectedCategory?.id === cat.id ? COLORS.BG : COLORS.GOLD_DIM}
-                        borderColor={COLORS.GOLD_DIM}
-                        _hover={{
-                          bg: selectedCategory?.id === cat.id ? COLORS.GOLD_BRIGHT : COLORS.PANEL_MID,
-                          borderColor: COLORS.GOLD_BRIGHT,
-                        }}
-                        width="100%"
-                        justifyContent="flex-start"
-                      >
-                        {cat.name}
-                      </Button>
-                    ))}
-                  </VStack>
-                </Card.Body>
-              </Card.Root>
-            )
-          })}
-        </SimpleGrid>
+        {/* Progress Bar */}
+        <Box width="100%" mb={8}>
+          <HStack justify="space-between" mb={2}>
+            <Text color={COLORS.TEXT_DIM} fontSize="xs" textTransform="uppercase" letterSpacing="1px">
+              {currentGroupLabel}
+            </Text>
+            <Text color={COLORS.TEXT_DIM} fontSize="xs">
+              Step {currentStep + 1} of {totalSteps}
+            </Text>
+          </HStack>
+          <Box width="100%" bg={COLORS.PANEL_MID} borderRadius="full" h="6px" overflow="hidden">
+            <Box
+              h="100%"
+              bg={COLORS.GOLD_BRIGHT}
+              borderRadius="full"
+              width={`${progressPercent}%`}
+              style={{ transition: "width 0.4s ease" }}
+            />
+          </Box>
+          <HStack justify="space-between" mt={3}>
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <Box
+                key={i}
+                w="8px"
+                h="8px"
+                borderRadius="full"
+                bg={i <= currentStep ? COLORS.GOLD_BRIGHT : COLORS.PANEL_MID}
+                flexShrink={0}
+                style={{ transition: "background 0.3s ease" }}
+              />
+            ))}
+          </HStack>
+        </Box>
 
-        {/* Nomination Form */}
-        {selectedCategory && (
-          <Card.Root
-            bg={COLORS.PANEL_DARK}
-            borderColor={COLORS.GOLD_DIM}
-            borderWidth="1px"
-            maxW="700px"
-            mx="auto"
-          >
-            <Card.Header borderBottom={`1px solid ${COLORS.GOLD_DIM}`} pb={6}>
-              <VStack align="start" gap={2}>
-                <Heading size="lg" color={COLORS.GOLD_BRIGHT}>
-                  Nominate for {selectedCategory.name}
+        {/* Step Card */}
+        <Box
+          bg={COLORS.PANEL_DARK}
+          borderWidth="1px"
+          borderColor={COLORS.GOLD_DIM}
+          borderRadius="xl"
+          p={{ base: 5, md: 8 }}
+          mb={6}
+        >
+          {/* ── STEP 0: NOMINATOR INFO ── */}
+          {currentStep === 0 && (
+            <VStack gap={6} align="stretch">
+              <VStack align="start" gap={1}>
+                <Heading
+                  fontFamily="'Cormorant Garamond', serif"
+                  color={COLORS.GOLD_BRIGHT}
+                  fontSize="2xl"
+                  letterSpacing="1px"
+                >
+                  Your Information
                 </Heading>
                 <Text color={COLORS.TEXT_DIM} fontSize="sm">
-                  {selectedCategory.description}
+                  You'll only fill this in once. It will be attached to all your nominations.
                 </Text>
               </VStack>
-            </Card.Header>
 
-            {/* FIX: Removed `as="form"` from Card.Body — use a plain <form> wrapper inside instead */}
-            <Card.Body pt={6}>
-              <form onSubmit={handleSubmit}>
-                <VStack gap={6}>
-                  {/* Nominee Section */}
-                  <Box width="100%">
-                    <Heading size="sm" color={COLORS.GOLD_BASE} mb={4}>
-                      Nominee Information
-                    </Heading>
-                    <VStack gap={4}>
-                      <Input
-                        placeholder="Nominee Name *"
-                        required
-                        value={formData.nomineeName}
-                        onChange={(e) => setFormData({ ...formData, nomineeName: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                      />
-                      <Input
-                        placeholder="Nominee Email"
-                        type="email"
-                        value={formData.nomineeEmail}
-                        onChange={(e) => setFormData({ ...formData, nomineeEmail: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                      />
-                      <Input
-                        placeholder="Nominee Phone"
-                        type="tel"
-                        value={formData.nomineePhone}
-                        onChange={(e) => setFormData({ ...formData, nomineePhone: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                      />
-                    </VStack>
-                  </Box>
+              <FormField label="Full Name *" error={errors.name}>
+                <Input
+                  placeholder="e.g. Amara Okafor"
+                  value={nominator.name}
+                  onChange={(e) => {
+                    setNominator({ ...nominator, name: e.target.value })
+                    setErrors((prev) => { const n = { ...prev }; delete n.name; return n })
+                  }}
+                  {...inputStyles}
+                />
+              </FormField>
 
-                  {/* Nominator Section */}
-                  <Box width="100%">
-                    <Heading size="sm" color={COLORS.GOLD_BASE} mb={4}>
-                      Your Information (Nominator)
-                    </Heading>
-                    <VStack gap={4}>
-                      <Input
-                        placeholder="Your Name *"
-                        required
-                        value={formData.nominatorName}
-                        onChange={(e) => setFormData({ ...formData, nominatorName: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                      />
-                      <Input
-                        placeholder="Your Email *"
-                        type="email"
-                        required
-                        value={formData.nominatorEmail}
-                        onChange={(e) => setFormData({ ...formData, nominatorEmail: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                      />
-                      <Input
-                        placeholder="Your Phone"
-                        type="tel"
-                        value={formData.nominatorPhone}
-                        onChange={(e) => setFormData({ ...formData, nominatorPhone: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                      />
-                    </VStack>
-                  </Box>
+              <FormField label="Matric Number *" hint="Format: 2024/12345" error={errors.matricNumber}>
+                <Input
+                  placeholder="2024/12345"
+                  value={nominator.matricNumber}
+                  onChange={(e) => {
+                    setNominator({ ...nominator, matricNumber: e.target.value })
+                    setErrors((prev) => { const n = { ...prev }; delete n.matricNumber; return n })
+                  }}
+                  {...inputStyles}
+                />
+              </FormField>
 
-                  {/* Reason Section */}
-                  <Box width="100%">
-                    <Heading size="sm" color={COLORS.GOLD_BASE} mb={4}>
-                      Nomination Details
-                    </Heading>
-                    <VStack gap={4}>
-                      <Textarea
-                        placeholder="Why do you nominate this person? Please provide specific examples of their achievements or contributions. *"
-                        required
-                        value={formData.nominationReason}
-                        onChange={(e) => setFormData({ ...formData, nominationReason: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                        minH="120px"
-                      />
-                      <Input
-                        placeholder="Evidence Link (Portfolio, Social Media, etc.)"
-                        type="url"
-                        value={formData.evidenceLink}
-                        onChange={(e) => setFormData({ ...formData, evidenceLink: e.target.value })}
-                        bg={COLORS.PANEL_MID}
-                        borderColor={COLORS.GOLD_DIM}
-                        color={COLORS.TEXT}
-                        _placeholder={{ color: COLORS.TEXT_DIM }}
-                      />
-                    </VStack>
-                  </Box>
+              <FormField label="Email Address *" error={errors.email}>
+                <Input
+                  placeholder="you@university.edu.ng"
+                  type="email"
+                  value={nominator.email}
+                  onChange={(e) => {
+                    setNominator({ ...nominator, email: e.target.value })
+                    setErrors((prev) => { const n = { ...prev }; delete n.email; return n })
+                  }}
+                  {...inputStyles}
+                />
+              </FormField>
 
-                  {/* Action Buttons */}
-                  <HStack width="100%" gap={4}>
-                    <Button
-                      flex={1}
-                      variant="outline"
-                      borderColor={COLORS.GOLD_DIM}
-                      color={COLORS.GOLD_DIM}
-                      type="button"
-                      onClick={resetForm}
+              <FormField label="Phone Number (optional)">
+                <Input
+                  placeholder="+234 800 000 0000"
+                  type="tel"
+                  value={nominator.phone}
+                  onChange={(e) => setNominator({ ...nominator, phone: e.target.value })}
+                  {...inputStyles}
+                />
+              </FormField>
+            </VStack>
+          )}
+
+          {/* ── STEPS 1–N: CATEGORY NOMINATIONS ── */}
+          {currentStep >= 1 && currentStep <= categoryGroups.length && (() => {
+            const group = categoryGroups[currentStep - 1]
+            const groupNominations = nominations[group.type] || []
+            return (
+              <VStack gap={6} align="stretch">
+                <VStack align="start" gap={1}>
+                  <HStack gap={3} align="center">
+                    <Text fontSize="2xl">{group.emoji}</Text>
+                    <Heading
+                      fontFamily="'Cormorant Garamond', serif"
+                      color={COLORS.GOLD_BRIGHT}
+                      fontSize="2xl"
+                      letterSpacing="1px"
                     >
-                      Cancel
-                    </Button>
-                    <Button
-                      flex={1}
-                      bg={COLORS.GOLD_BRIGHT}
-                      color={COLORS.BG}
-                      loading={isSubmitting}
-                      type="submit"
-                      _hover={{ opacity: 0.9 }}
-                    >
-                      Submit Nomination
-                    </Button>
+                      {group.name}
+                    </Heading>
                   </HStack>
+                  <Text color={COLORS.TEXT_DIM} fontSize="sm">
+                    Nominate someone for each award below. All fields are required.
+                  </Text>
                 </VStack>
-              </form>
-            </Card.Body>
-          </Card.Root>
-        )}
+
+                {groupNominations.map((nom, i) => (
+                  <Box
+                    key={nom.categoryId}
+                    bg={COLORS.BG}
+                    borderWidth="1px"
+                    borderColor={COLORS.GOLD_DIM}
+                    borderRadius="lg"
+                    p={5}
+                  >
+                    <Text
+                      color={COLORS.GOLD_BRIGHT}
+                      fontWeight="600"
+                      fontSize="xs"
+                      textTransform="uppercase"
+                      letterSpacing="1px"
+                      mb={4}
+                    >
+                      {nom.categoryName}
+                    </Text>
+                    <VStack gap={4} align="stretch">
+                      <FormField
+                        label="Nominee's Full Name *"
+                        error={errors[`${group.type}_${i}_name`]}
+                      >
+                        <Input
+                          placeholder="Who are you nominating?"
+                          value={nom.nomineeName}
+                          onChange={(e) => updateNomination(group.type, i, "nomineeName", e.target.value)}
+                          {...inputStyles}
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Nominee's Matric Number *"
+                        hint="Format: 2024/12345"
+                        error={errors[`${group.type}_${i}_matric`]}
+                      >
+                        <Input
+                          placeholder="2024/12345"
+                          value={nom.nomineeMatric}
+                          onChange={(e) => updateNomination(group.type, i, "nomineeMatric", e.target.value)}
+                          {...inputStyles}
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Why do you nominate them? *"
+                        error={errors[`${group.type}_${i}_reason`]}
+                      >
+                        <Textarea
+                          placeholder="Give specific examples of what they've done to deserve this award..."
+                          value={nom.nominationReason}
+                          onChange={(e) => updateNomination(group.type, i, "nominationReason", e.target.value)}
+                          minH="100px"
+                          {...inputStyles}
+                        />
+                      </FormField>
+                    </VStack>
+                  </Box>
+                ))}
+              </VStack>
+            )
+          })()}
+
+          {/* ── REVIEW STEP ── */}
+          {currentStep === totalSteps - 1 && (
+            <VStack gap={6} align="stretch">
+              <VStack align="start" gap={1}>
+                <Heading
+                  fontFamily="'Cormorant Garamond', serif"
+                  color={COLORS.GOLD_BRIGHT}
+                  fontSize="2xl"
+                  letterSpacing="1px"
+                >
+                  Review Your Nominations
+                </Heading>
+                <Text color={COLORS.TEXT_DIM} fontSize="sm">
+                  Everything look good? Use Back to make changes before submitting.
+                </Text>
+              </VStack>
+
+              {/* Nominator summary */}
+              <Box
+                bg={COLORS.BG}
+                borderWidth="1px"
+                borderColor={COLORS.GOLD_DIM}
+                borderRadius="lg"
+                p={5}
+              >
+                <Text
+                  color={COLORS.GOLD_BASE}
+                  fontWeight="600"
+                  fontSize="xs"
+                  textTransform="uppercase"
+                  letterSpacing="1px"
+                  mb={3}
+                >
+                  Your Details
+                </Text>
+                <VStack align="start" gap={1}>
+                  <Text color={COLORS.TEXT} fontSize="sm">
+                    <Text as="span" color={COLORS.TEXT_DIM}>Name: </Text>{nominator.name}
+                  </Text>
+                  <Text color={COLORS.TEXT} fontSize="sm">
+                    <Text as="span" color={COLORS.TEXT_DIM}>Matric: </Text>{nominator.matricNumber}
+                  </Text>
+                  <Text color={COLORS.TEXT} fontSize="sm">
+                    <Text as="span" color={COLORS.TEXT_DIM}>Email: </Text>{nominator.email}
+                  </Text>
+                  {nominator.phone && (
+                    <Text color={COLORS.TEXT} fontSize="sm">
+                      <Text as="span" color={COLORS.TEXT_DIM}>Phone: </Text>{nominator.phone}
+                    </Text>
+                  )}
+                </VStack>
+              </Box>
+
+              {/* All nominations */}
+              {categoryGroups.map((group) => {
+                const groupNominations = nominations[group.type] || []
+                return (
+                  <Box
+                    key={group.type}
+                    bg={COLORS.BG}
+                    borderWidth="1px"
+                    borderColor={COLORS.GOLD_DIM}
+                    borderRadius="lg"
+                    p={5}
+                  >
+                    <HStack gap={2} mb={4}>
+                      <Text>{group.emoji}</Text>
+                      <Text
+                        color={COLORS.GOLD_BASE}
+                        fontWeight="600"
+                        fontSize="xs"
+                        textTransform="uppercase"
+                        letterSpacing="1px"
+                      >
+                        {group.name}
+                      </Text>
+                    </HStack>
+                    <VStack gap={4} align="stretch">
+                      {groupNominations.map((nom, i) => (
+                        <Box
+                          key={nom.categoryId}
+                          borderTop={i > 0 ? `1px solid ${COLORS.GOLD_DIM}` : undefined}
+                          pt={i > 0 ? 3 : 0}
+                        >
+                          <Text
+                            color={COLORS.GOLD_DIM}
+                            fontSize="xs"
+                            textTransform="uppercase"
+                            letterSpacing="0.5px"
+                            mb={1}
+                          >
+                            {nom.categoryName}
+                          </Text>
+                          <Text color={COLORS.TEXT} fontSize="sm">
+                            <Text as="span" color={COLORS.TEXT_DIM}>Nominee: </Text>
+                            {nom.nomineeName} ({nom.nomineeMatric})
+                          </Text>
+                          <Text color={COLORS.TEXT} fontSize="sm" mt={1}>
+                            <Text as="span" color={COLORS.TEXT_DIM}>Reason: </Text>
+                            {nom.nominationReason}
+                          </Text>
+                        </Box>
+                      ))}
+                    </VStack>
+                  </Box>
+                )
+              })}
+            </VStack>
+          )}
+        </Box>
+
+        {/* Navigation Buttons */}
+        <HStack justify="space-between" gap={4}>
+          <Button
+            variant="outline"
+            borderColor={COLORS.GOLD_DIM}
+            color={COLORS.GOLD_DIM}
+            onClick={handleBack}
+            visibility={currentStep === 0 ? "hidden" : "visible"}
+            _hover={{ borderColor: COLORS.GOLD_BRIGHT, color: COLORS.GOLD_BRIGHT }}
+          >
+            ← Back
+          </Button>
+
+          {currentStep < totalSteps - 1 ? (
+            <Button
+              bg={COLORS.GOLD_BRIGHT}
+              color={COLORS.BG}
+              onClick={handleNext}
+              _hover={{ opacity: 0.9 }}
+              px={8}
+            >
+              Next →
+            </Button>
+          ) : (
+            <Button
+              bg={COLORS.GOLD_BRIGHT}
+              color={COLORS.BG}
+              loading={isSubmitting}
+              onClick={handleSubmit}
+              _hover={{ opacity: 0.9 }}
+              px={8}
+            >
+              Submit All Nominations 🏆
+            </Button>
+          )}
+        </HStack>
       </Container>
     </Box>
   )
