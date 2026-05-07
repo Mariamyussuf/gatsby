@@ -4,10 +4,8 @@ import {
   Text,
   Input,
   Button,
-  Badge,
   HStack,
   VStack,
-  Table,
 } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
@@ -109,6 +107,7 @@ export function TransactionsList() {
     padding: "8px 12px",
     borderBottom: `1px solid ${COLORS.GOLD_DIM}30`,
     whiteSpace: "nowrap" as const,
+    textAlign: "left" as const,
   }
 
   const tdStyle = {
@@ -207,6 +206,7 @@ export function TransactionsList() {
         {filtered.length} transaction{filtered.length !== 1 ? "s" : ""} found
       </Text>
 
+      {/* Table — native HTML, no Chakra Table */}
       <Box overflowX="auto">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -234,7 +234,7 @@ export function TransactionsList() {
                 <tr
                   key={t.id}
                   style={{ transition: "background 0.2s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${COLORS.GOLD_GLOW}08` }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${COLORS.GOLD_DIM}08` }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
                 >
                   <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>{t.group_booking_code}</td>
@@ -244,8 +244,11 @@ export function TransactionsList() {
                   <td style={tdStyle}>{t.quantity}</td>
                   <td style={tdStyle}>₦{(t.total_kobo / 100).toLocaleString()}</td>
                   <td style={tdStyle}>
-                    <Badge
+                    {/* Badge replaced with inline span */}
+                    <Box
+                      as="span"
                       style={{
+                        display: "inline-block",
                         background: t.payment_status === "confirmed" ? "#22c55e20" : "#F9731620",
                         color: t.payment_status === "confirmed" ? "#22c55e" : "#F97316",
                         fontSize: "0.5rem",
@@ -253,10 +256,12 @@ export function TransactionsList() {
                         border: `1px solid ${t.payment_status === "confirmed" ? "#22c55e40" : "#F9731640"}`,
                         textTransform: "uppercase",
                         letterSpacing: "0.05em",
+                        padding: "2px 6px",
+                        borderRadius: "2px",
                       }}
                     >
                       {t.payment_status}
-                    </Badge>
+                    </Box>
                   </td>
                   <td style={tdStyle}>
                     {t.confirmed_at
