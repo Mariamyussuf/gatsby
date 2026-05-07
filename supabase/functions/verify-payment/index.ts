@@ -13,12 +13,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response(null, { status: 200, headers: corsHeaders })
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
@@ -27,8 +27,8 @@ Deno.serve(async (req) => {
     const { reference, gatewayRef } = await req.json()
 
     if (!reference) {
-      return new Response(JSON.stringify({ error: "Missing reference" }), {
-        status: 400,
+      return new Response(JSON.stringify({ success: false, reason: "missing_reference" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     if (txnErr || !txn) {
       return new Response(JSON.stringify({ success: false, reason: "transaction_not_found" }), {
-        status: 404,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     const error = err as Error
     console.error("Verify payment error:", error.message)
     return new Response(JSON.stringify({ success: false, reason: "error", message: error.message }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
