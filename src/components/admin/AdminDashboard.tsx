@@ -5,6 +5,7 @@ import { COLORS } from "@/config/constants"
 import { TableMap } from "./TableMap"
 import { AttendeeList } from "./AttendeeList"
 import { TransactionsList } from "./TransactionsList"
+import { AwardsNominationsList } from "./AwardsNominationsList"
 import { QRScanner } from "./QRScanner"
 import { VVIPPickupManager } from "./VVIPPickupManager"
 import { WaitlistAdmin } from "./WaitlistAdmin"
@@ -157,6 +158,7 @@ export function AdminDashboard() {
             { value: "overview", label: "Table Map" },
             { value: "transactions", label: "Transactions" },
             { value: "attendees", label: "Attendees" },
+            { value: "awards", label: "Awards" },
             { value: "waitlist", label: "Waitlist" },
             { value: "scanner", label: "QR Scanner" },
             { value: "vvip", label: "VVIP Pickups" },
@@ -183,6 +185,9 @@ export function AdminDashboard() {
         </Tabs.Content>
         <Tabs.Content value="attendees">
           <AttendeeList />
+        </Tabs.Content>
+        <Tabs.Content value="awards">
+          <AwardsNominationsList />
         </Tabs.Content>
         <Tabs.Content value="waitlist">
           <WaitlistAdmin />
