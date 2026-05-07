@@ -9,6 +9,7 @@ import {
 } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
+import { confirmBooking, type PendingBooking } from "@/lib/confirmBooking"
 import Papa from "papaparse"
 
 type TransactionRow = {
@@ -24,7 +25,10 @@ type TransactionRow = {
   created_at: string
   confirmed_at: string | null
   tier_name?: string
+  tier_id?: string
   group_booking_code: string
+  table_id?: string
+  table_number?: number
 }
 
 export function TransactionsList() {
@@ -32,14 +36,12 @@ export function TransactionsList() {
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed">("all")
   const [loading, setLoading] = useState(true)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
   const fetchData = async () => {
     const { data } = await supabase
       .from("transactions")
-      .select(`
-        *,
-        ticket_tiers (name)
-      `)
+      .select(`*, ticket_tiers (name)`)
       .order("created_at", { ascending: false })
 
     if (data) {
@@ -61,18 +63,63 @@ export function TransactionsList() {
     return () => { supabase.removeChannel(ch) }
   }, [])
 
-  const filtered = transactions
-    .filter((t) => {
-      if (filterStatus !== "all" && t.payment_status !== filterStatus) return false
-      const q = search.toLowerCase()
-      return (
-        t.primary_email.toLowerCase().includes(q) ||
-        t.primary_first_name.toLowerCase().includes(q) ||
-        t.primary_last_name.toLowerCase().includes(q) ||
-        t.reference.toLowerCase().includes(q) ||
-        t.group_booking_code.toLowerCase().includes(q)
-      )
-    })
+  const handleConfirm = async (txn: TransactionRow) => {
+    setConfirmingId(txn.id)
+    try {
+      const { data: attendees } = await supabase
+        .from("attendees")
+        .select("first_name, email, is_primary")
+        .eq("transaction_id", txn.id)
+
+      const { data: table } = await supabase
+        .from("gala_tables")
+        .select("seats_booked, seats_total")
+        .eq("id", txn.table_id)
+        .single()
+
+      if (!attendees || !table) {
+        alert("Could not load transaction data")
+        return
+      }
+
+      const pending: PendingBooking = {
+        txnId: txn.id,
+        reference: txn.reference,
+        groupCode: txn.group_booking_code,
+        tierId: txn.tier_id!,
+        tierName: txn.tier_name!,
+        tableId: txn.table_id!,
+        tableNumber: txn.table_number!,
+        tableSeatsBooked: table.seats_booked,
+        tableSeatsTotal: table.seats_total,
+        quantity: txn.quantity,
+        attendees: attendees.map((a) => ({
+          firstName: a.first_name,
+          email: a.email,
+          isPrimary: a.is_primary,
+        })),
+      }
+
+      await confirmBooking(pending)
+      await fetchData()
+    } catch (err: any) {
+      alert(err.message === "TABLE_FULL" ? "Table is full" : `Error: ${err.message}`)
+    } finally {
+      setConfirmingId(null)
+    }
+  }
+
+  const filtered = transactions.filter((t) => {
+    if (filterStatus !== "all" && t.payment_status !== filterStatus) return false
+    const q = search.toLowerCase()
+    return (
+      t.primary_email.toLowerCase().includes(q) ||
+      t.primary_first_name.toLowerCase().includes(q) ||
+      t.primary_last_name.toLowerCase().includes(q) ||
+      t.reference.toLowerCase().includes(q) ||
+      t.group_booking_code.toLowerCase().includes(q)
+    )
+  })
 
   const exportCsv = () => {
     const csv = Papa.unparse(
@@ -195,18 +242,11 @@ export function TransactionsList() {
         </Button>
       </HStack>
 
-      <Text
-        style={{
-          fontFamily: "'Josefin Sans', sans-serif",
-          fontSize: "0.6rem",
-          color: COLORS.GOLD_DIM,
-          letterSpacing: "0.1em",
-        }}
-      >
+      <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: COLORS.GOLD_DIM, letterSpacing: "0.1em" }}>
         {filtered.length} transaction{filtered.length !== 1 ? "s" : ""} found
       </Text>
 
-      {/* Table — native HTML, no Chakra Table */}
+      {/* Table */}
       <Box overflowX="auto">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -219,15 +259,11 @@ export function TransactionsList() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>
-                  Loading...
-                </td>
+                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>Loading...</td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>
-                  No transactions found
-                </td>
+                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>No transactions found</td>
               </tr>
             ) : (
               filtered.map((t) => (
@@ -244,7 +280,6 @@ export function TransactionsList() {
                   <td style={tdStyle}>{t.quantity}</td>
                   <td style={tdStyle}>₦{(t.total_kobo / 100).toLocaleString()}</td>
                   <td style={tdStyle}>
-                    {/* Badge replaced with inline span */}
                     <Box
                       as="span"
                       style={{
@@ -264,15 +299,36 @@ export function TransactionsList() {
                     </Box>
                   </td>
                   <td style={tdStyle}>
-                    {t.confirmed_at
-                      ? new Date(t.confirmed_at).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                      : "—"}
+                    {t.payment_status === "pending" ? (
+                      <button
+                        onClick={() => handleConfirm(t)}
+                        disabled={confirmingId === t.id}
+                        style={{
+                          background: confirmingId === t.id ? `${COLORS.GOLD_DIM}40` : "#22c55e20",
+                          color: "#22c55e",
+                          border: "1px solid #22c55e40",
+                          borderRadius: "2px",
+                          fontFamily: "'Josefin Sans', sans-serif",
+                          fontSize: "0.5rem",
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          padding: "3px 8px",
+                          cursor: confirmingId === t.id ? "not-allowed" : "pointer",
+                          opacity: confirmingId === t.id ? 0.6 : 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {confirmingId === t.id ? "Confirming…" : "Confirm"}
+                      </button>
+                    ) : t.confirmed_at ? (
+                      new Date(t.confirmed_at).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })
+                    ) : "—"}
                   </td>
                 </tr>
               ))
