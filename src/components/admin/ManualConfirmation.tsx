@@ -1,27 +1,9 @@
 import { useEffect, useState } from "react"
-import {
-  Box,
-  VStack,
-  HStack,
-  Heading,
-  Text,
-  Input,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Spinner,
-  Badge,
-  SimpleGrid,
-  Textarea,
-} from "@chakra-ui/react"
+import { Box, VStack, HStack, Text, Input, Button } from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
 import { confirmBooking, type PendingBooking } from "@/lib/confirmBooking"
 import { toaster } from "@/components/ui/toaster"
-
-declare const __SUPABASE_URL__: string
-declare const __SUPABASE_ANON_KEY__: string
 
 interface PendingTransaction {
   id: string
@@ -45,13 +27,12 @@ export function ManualConfirmation() {
   const [isConfirming, setIsConfirming] = useState(false)
   const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([])
 
-  // Load all pending transactions on mount
   useEffect(() => {
     loadPendingTransactions()
   }, [])
 
   const loadPendingTransactions = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("transactions")
       .select("id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at")
       .eq("payment_status", "pending")
@@ -64,11 +45,7 @@ export function ManualConfirmation() {
             .from("attendees")
             .select("*", { count: "exact", head: true })
             .eq("transaction_id", t.id)
-
-          return {
-            ...t,
-            attendees_count: count ?? 0,
-          }
+          return { ...t, attendees_count: count ?? 0 }
         })
       )
       setPendingTransactions(withCounts as PendingTransaction[])
@@ -80,7 +57,6 @@ export function ManualConfirmation() {
       toaster.create({ title: "Please enter a transaction reference", type: "error" })
       return
     }
-
     setIsLoading(true)
     try {
       const { data: txn, error } = await supabase
@@ -97,11 +73,7 @@ export function ManualConfirmation() {
           .from("attendees")
           .select("*", { count: "exact", head: true })
           .eq("transaction_id", txn.id)
-
-        setTransaction({
-          ...txn,
-          attendees_count: count ?? 0,
-        })
+        setTransaction({ ...txn, attendees_count: count ?? 0 })
       }
     } finally {
       setIsLoading(false)
@@ -110,10 +82,8 @@ export function ManualConfirmation() {
 
   const confirmTransaction = async (txn: PendingTransaction) => {
     if (!txn) return
-
     setIsConfirming(true)
     try {
-      // Get transaction details to build PendingBooking
       const { data: attendees } = await supabase
         .from("attendees")
         .select("first_name, email, is_primary")
@@ -130,7 +100,6 @@ export function ManualConfirmation() {
         return
       }
 
-      // Build PendingBooking object
       const pending: PendingBooking = {
         txnId: txn.id,
         reference: txn.reference,
@@ -149,7 +118,6 @@ export function ManualConfirmation() {
         })),
       }
 
-      // Confirm the booking
       await confirmBooking(pending)
 
       toaster.create({
@@ -162,7 +130,6 @@ export function ManualConfirmation() {
       setReference("")
       loadPendingTransactions()
     } catch (err: any) {
-      console.error("Confirmation error:", err)
       toaster.create({
         title: "Confirmation failed",
         description: err.message === "TABLE_FULL" ? "Table is full" : err.message,
@@ -173,142 +140,247 @@ export function ManualConfirmation() {
     }
   }
 
+  const labelStyle = {
+    fontFamily: "'Josefin Sans', sans-serif",
+    fontSize: "0.5rem",
+    letterSpacing: "0.2em",
+    color: COLORS.GOLD_DIM,
+    textTransform: "uppercase" as const,
+    marginBottom: "2px",
+  }
+
+  const valueStyle = {
+    fontFamily: "'Josefin Sans', sans-serif",
+    fontSize: "0.7rem",
+    color: COLORS.GOLD_BASE,
+  }
+
   return (
-    <VStack spacing={6} w="100%">
-      {/* Manual Search */}
-      <Card w="100%" bg={`${COLORS.PANEL_MID}40`} borderColor={COLORS.ACCENT} borderWidth={1}>
-        <CardHeader bg={`${COLORS.GOLD_GLOW}10`} borderBottomWidth={1} borderBottomColor={COLORS.ACCENT}>
-          <Heading size="md" color={COLORS.GOLD_BASE}>
+    <VStack gap="6" w="100%">
+      {/* Manual Search Card */}
+      <Box
+        w="100%"
+        style={{
+          border: `1px solid ${COLORS.GOLD_DIM}40`,
+          background: `${COLORS.PANEL_MID}40`,
+          borderRadius: "4px",
+        }}
+      >
+        {/* Card Header */}
+        <Box
+          px="5" py="4"
+          style={{
+            borderBottom: `1px solid ${COLORS.GOLD_DIM}30`,
+            background: `${COLORS.GOLD_DIM}08`,
+          }}
+        >
+          <Text style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: "1.1rem",
+            fontWeight: "600",
+            color: COLORS.GOLD_BASE,
+            letterSpacing: "0.05em",
+          }}>
             Manual Transaction Confirmation
-          </Heading>
-        </CardHeader>
-        <CardBody>
-          <VStack spacing={4}>
-            <Text color={COLORS.TEXT} fontSize="sm">
+          </Text>
+        </Box>
+
+        {/* Card Body */}
+        <Box px="5" py="4">
+          <VStack gap="4">
+            <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.65rem", color: COLORS.GOLD_DIM, letterSpacing: "0.05em" }}>
               Enter a transaction reference to search for and manually confirm bookings that failed due to errors.
             </Text>
-            <HStack w="100%">
+
+            <HStack w="100%" gap="3">
               <Input
-                placeholder="e.g., BUSA-2026-001..."
+                placeholder="e.g., GATSBY-2026-001..."
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && searchTransaction()}
-                bg={COLORS.INPUT_BG}
-                color={COLORS.TEXT}
-                borderColor={COLORS.ACCENT}
-                _placeholder={{ color: COLORS.TEXT_MUTED }}
+                style={{
+                  background: `${COLORS.PANEL_MID}60`,
+                  border: `1px solid ${COLORS.GOLD_DIM}40`,
+                  color: COLORS.GOLD_BASE,
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: "0.75rem",
+                }}
               />
-              <Button onClick={searchTransaction} isLoading={isLoading} colorScheme="orange" minW="120px">
+              <Button
+                onClick={searchTransaction}
+                loading={isLoading}
+                style={{
+                  background: COLORS.GOLD_BASE,
+                  color: COLORS.BG,
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: "0.6rem",
+                  letterSpacing: "0.15em",
+                  textTransform: "uppercase",
+                  minWidth: "100px",
+                  cursor: "pointer",
+                }}
+              >
                 Search
               </Button>
             </HStack>
 
             {transaction && (
-              <Box w="100%" p={4} bg={COLORS.BG} borderRadius="md" borderColor={COLORS.ACCENT} borderWidth={1}>
-                <SimpleGrid columns={2} spacing={2} mb={4}>
+              <Box
+                w="100%"
+                p="4"
+                style={{
+                  background: COLORS.BG,
+                  border: `1px solid ${COLORS.GOLD_DIM}30`,
+                  borderRadius: "4px",
+                }}
+              >
+                {/* 2-col grid */}
+                <Box style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                   <Box>
-                    <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                      Reference
-                    </Text>
-                    <Text color={COLORS.GOLD_BASE} fontWeight="600">
-                      {transaction.reference}
-                    </Text>
+                    <Text style={labelStyle}>Reference</Text>
+                    <Text style={{ ...valueStyle, color: COLORS.GOLD_BRIGHT }}>{transaction.reference}</Text>
                   </Box>
                   <Box>
-                    <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                      Status
-                    </Text>
-                    <Badge colorScheme="orange">{transaction.payment_status}</Badge>
+                    <Text style={labelStyle}>Status</Text>
+                    <Box as="span" style={{
+                      display: "inline-block",
+                      background: "#F9731620",
+                      color: "#F97316",
+                      fontSize: "0.5rem",
+                      fontFamily: "'Josefin Sans', sans-serif",
+                      border: "1px solid #F9731640",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      padding: "2px 6px",
+                      borderRadius: "2px",
+                    }}>
+                      {transaction.payment_status}
+                    </Box>
                   </Box>
                   <Box>
-                    <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                      Amount
-                    </Text>
-                    <Text color={COLORS.TEXT}>₦{transaction.amount.toLocaleString()}</Text>
+                    <Text style={labelStyle}>Amount</Text>
+                    <Text style={valueStyle}>₦{transaction.amount.toLocaleString()}</Text>
                   </Box>
                   <Box>
-                    <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                      Quantity
-                    </Text>
-                    <Text color={COLORS.TEXT}>{transaction.quantity} tickets</Text>
+                    <Text style={labelStyle}>Quantity</Text>
+                    <Text style={valueStyle}>{transaction.quantity} tickets</Text>
                   </Box>
                   <Box>
-                    <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                      Tier
-                    </Text>
-                    <Text color={COLORS.TEXT}>{transaction.tier_name}</Text>
+                    <Text style={labelStyle}>Tier</Text>
+                    <Text style={valueStyle}>{transaction.tier_name}</Text>
                   </Box>
                   <Box>
-                    <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                      Table
-                    </Text>
-                    <Text color={COLORS.TEXT}>Table {transaction.table_number}</Text>
+                    <Text style={labelStyle}>Table</Text>
+                    <Text style={valueStyle}>Table {transaction.table_number}</Text>
                   </Box>
-                </SimpleGrid>
-                <Box mb={4} p={2} bg={`${COLORS.GOLD_GLOW}10`} borderRadius="sm">
-                  <Text fontSize="sm" color={COLORS.TEXT}>
+                </Box>
+
+                <Box
+                  mb="3" p="2"
+                  style={{ background: `${COLORS.GOLD_DIM}10`, borderRadius: "2px" }}
+                >
+                  <Text style={{ ...valueStyle, fontSize: "0.65rem" }}>
                     <strong>Group Code:</strong> {transaction.group_code}
                   </Text>
-                  <Text fontSize="xs" color={COLORS.TEXT_MUTED}>
+                  <Text style={{ ...valueStyle, fontSize: "0.6rem", color: COLORS.GOLD_DIM }}>
                     {transaction.attendees_count} attendee{transaction.attendees_count !== 1 ? "s" : ""} created
                   </Text>
                 </Box>
+
                 <Button
                   onClick={() => confirmTransaction(transaction)}
-                  isLoading={isConfirming}
-                  w="100%"
-                  colorScheme="green"
+                  loading={isConfirming}
+                  style={{
+                    width: "100%",
+                    background: "#22c55e20",
+                    color: "#22c55e",
+                    border: "1px solid #22c55e40",
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.6rem",
+                    letterSpacing: "0.15em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
                 >
                   Confirm & Send Tickets
                 </Button>
               </Box>
             )}
           </VStack>
-        </CardBody>
-      </Card>
+        </Box>
+      </Box>
 
       {/* Pending Transactions List */}
       {pendingTransactions.length > 0 && (
-        <Card w="100%" bg={`${COLORS.PANEL_MID}40`} borderColor={COLORS.ACCENT} borderWidth={1}>
-          <CardHeader bg={`${COLORS.GOLD_GLOW}10`} borderBottomWidth={1} borderBottomColor={COLORS.ACCENT}>
-            <Heading size="md" color={COLORS.GOLD_BASE}>
+        <Box
+          w="100%"
+          style={{
+            border: `1px solid ${COLORS.GOLD_DIM}40`,
+            background: `${COLORS.PANEL_MID}40`,
+            borderRadius: "4px",
+          }}
+        >
+          <Box
+            px="5" py="4"
+            style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, background: `${COLORS.GOLD_DIM}08` }}
+          >
+            <Text style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "1.1rem",
+              fontWeight: "600",
+              color: COLORS.GOLD_BASE,
+            }}>
               All Pending Transactions ({pendingTransactions.length})
-            </Heading>
-          </CardHeader>
-          <CardBody>
-            <VStack spacing={3} align="stretch">
+            </Text>
+          </Box>
+
+          <Box px="5" py="4">
+            <VStack gap="3" align="stretch">
               {pendingTransactions.map((txn) => (
                 <Box
                   key={txn.id}
-                  p={3}
-                  bg={COLORS.BG}
-                  borderRadius="md"
-                  borderLeft={`4px solid ${COLORS.GOLD_BASE}`}
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
+                  p="3"
+                  style={{
+                    background: COLORS.BG,
+                    borderRadius: "4px",
+                    borderLeft: `4px solid ${COLORS.GOLD_BASE}`,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
                   <Box>
-                    <Text color={COLORS.GOLD_BASE} fontWeight="600" fontSize="sm">
+                    <Text style={{ ...valueStyle, color: COLORS.GOLD_BRIGHT, fontWeight: "600" }}>
                       {txn.reference}
                     </Text>
-                    <Text color={COLORS.TEXT} fontSize="xs">
+                    <Text style={{ ...valueStyle, fontSize: "0.6rem", color: COLORS.GOLD_DIM }}>
                       {txn.tier_name} · {txn.quantity} ticket(s) · Table {txn.table_number}
                     </Text>
                   </Box>
-                  <Button
-                    size="sm"
-                    colorScheme="green"
-                    isLoading={isConfirming}
+                  <button
                     onClick={() => confirmTransaction(txn)}
+                    disabled={isConfirming}
+                    style={{
+                      background: isConfirming ? `${COLORS.GOLD_DIM}20` : "#22c55e20",
+                      color: "#22c55e",
+                      border: "1px solid #22c55e40",
+                      borderRadius: "2px",
+                      fontFamily: "'Josefin Sans', sans-serif",
+                      fontSize: "0.55rem",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      padding: "4px 10px",
+                      cursor: isConfirming ? "not-allowed" : "pointer",
+                      opacity: isConfirming ? 0.6 : 1,
+                    }}
                   >
-                    Confirm
-                  </Button>
+                    {isConfirming ? "Confirming…" : "Confirm"}
+                  </button>
                 </Box>
               ))}
             </VStack>
-          </CardBody>
-        </Card>
+          </Box>
+        </Box>
       )}
     </VStack>
   )
