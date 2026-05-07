@@ -6,6 +6,7 @@ import { TableMap } from "./TableMap"
 import { AttendeeList } from "./AttendeeList"
 import { TransactionsList } from "./TransactionsList"
 import { AwardsNominationsList } from "./AwardsNominationsList"
+import { ManualConfirmation } from "./ManualConfirmation"
 import { QRScanner } from "./QRScanner"
 import { VVIPPickupManager } from "./VVIPPickupManager"
 import { WaitlistAdmin } from "./WaitlistAdmin"
@@ -159,6 +160,7 @@ export function AdminDashboard() {
             { value: "transactions", label: "Transactions" },
             { value: "attendees", label: "Attendees" },
             { value: "awards", label: "Awards" },
+            { value: "recovery", label: "Recovery" },
             { value: "waitlist", label: "Waitlist" },
             { value: "scanner", label: "QR Scanner" },
             { value: "vvip", label: "VVIP Pickups" },
@@ -188,6 +190,9 @@ export function AdminDashboard() {
         </Tabs.Content>
         <Tabs.Content value="awards">
           <AwardsNominationsList />
+        </Tabs.Content>
+        <Tabs.Content value="recovery">
+          <ManualConfirmation />
         </Tabs.Content>
         <Tabs.Content value="waitlist">
           <WaitlistAdmin />

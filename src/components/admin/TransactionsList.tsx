@@ -260,11 +260,12 @@ export function TransactionsList() {
                   </td>
                   <td style={tdStyle}>
                     {t.confirmed_at
-                      ? new Date(t.confirmed_at).toLocaleDateString("en-US", {
+                      ? new Date(t.confirmed_at).toLocaleString("en-US", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
+                          hour12: true,
                         })
                       : "—"}
                   </td>
