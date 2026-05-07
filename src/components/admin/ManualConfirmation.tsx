@@ -36,7 +36,6 @@ interface PendingTransaction {
   table_number: number
   attendees_count: number
   created_at: string
-  email: string
 }
 
 export function ManualConfirmation() {
@@ -54,7 +53,7 @@ export function ManualConfirmation() {
   const loadPendingTransactions = async () => {
     const { data, error } = await supabase
       .from("transactions")
-      .select("id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at, email")
+      .select("id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at")
       .eq("payment_status", "pending")
       .order("created_at", { ascending: false })
 
@@ -86,7 +85,7 @@ export function ManualConfirmation() {
     try {
       const { data: txn, error } = await supabase
         .from("transactions")
-        .select("id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at, email")
+        .select("id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at")
         .eq("reference", reference.trim())
         .single()
 
@@ -248,10 +247,10 @@ export function ManualConfirmation() {
                 </SimpleGrid>
                 <Box mb={4} p={2} bg={`${COLORS.GOLD_GLOW}10`} borderRadius="sm">
                   <Text fontSize="sm" color={COLORS.TEXT}>
-                    <strong>Email:</strong> {transaction.email}
-                  </Text>
-                  <Text fontSize="sm" color={COLORS.TEXT}>
                     <strong>Group Code:</strong> {transaction.group_code}
+                  </Text>
+                  <Text fontSize="xs" color={COLORS.TEXT_MUTED}>
+                    {transaction.attendees_count} attendee{transaction.attendees_count !== 1 ? "s" : ""} created
                   </Text>
                 </Box>
                 <Button
@@ -294,7 +293,7 @@ export function ManualConfirmation() {
                       {txn.reference}
                     </Text>
                     <Text color={COLORS.TEXT} fontSize="xs">
-                      {txn.tier_name} · {txn.quantity} ticket(s) · {txn.email}
+                      {txn.tier_name} · {txn.quantity} ticket(s) · Table {txn.table_number}
                     </Text>
                   </Box>
                   <Button
