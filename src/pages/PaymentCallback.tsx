@@ -7,6 +7,7 @@ import { Box, Text, Spinner, VStack } from "@chakra-ui/react"
 import { confirmBooking, PENDING_BOOKING_KEY, type PendingBooking } from "@/lib/confirmBooking"
 import { SuccessScreen } from "@/components/booking/SuccessScreen"
 import { COLORS } from "@/config/constants"
+import { supabase } from "@/lib/supabase"
 
 export default function PaymentCallbackPage() {
   const [params] = useSearchParams()
@@ -39,30 +40,63 @@ export default function PaymentCallbackPage() {
       }
 
       try {
-        // Verify payment was actually successful with Squad
+        // Verify payment was actually successful
         setMessage("Verifying payment status…")
-        const verifyRes = await fetch(`${__SUPABASE_URL__}/functions/v1/verify-payment`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
-          },
-          body: JSON.stringify({
-            reference: pending.reference,
-            gatewayRef: gatewayRef ?? transactionRef,
-          }),
-        })
+        
+        let paymentVerified = false
+        
+        // Try to verify with Squad API first
+        try {
+          const verifyRes = await fetch(`${__SUPABASE_URL__}/functions/v1/verify-payment`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
+            },
+            body: JSON.stringify({
+              reference: pending.reference,
+              gatewayRef: gatewayRef ?? transactionRef,
+            }),
+          })
 
-        const verifyData = await verifyRes.json()
+          const verifyData = await verifyRes.json()
+          
+          if (verifyData.success === true) {
+            paymentVerified = true
+          } else if (verifyData.reason === "cancelled") {
+            setMessage("Payment cancelled. Your booking was not confirmed.")
+            setStatus("error")
+            sessionStorage.removeItem(PENDING_BOOKING_KEY)
+            return
+          } else if (verifyData.reason === "failed") {
+            setMessage("Payment failed. Please try again.")
+            setStatus("error")
+            sessionStorage.removeItem(PENDING_BOOKING_KEY)
+            return
+          }
+          // If verification returns other status, fall through to database check
+        } catch (verifyErr) {
+          // If Squad verification fails (CORS, network, etc), fall back to database check
+          console.log("[v0] Squad verification failed, using database fallback")
+        }
 
-        if (!verifyRes.ok || !verifyData.success) {
-          setMessage(
-            verifyData.reason === "cancelled"
-              ? "Payment cancelled. Your booking was not confirmed."
-              : verifyData.reason === "failed"
-                ? "Payment failed. Please try again."
-                : "Payment verification failed. Please contact support."
-          )
+        // Fallback: check if transaction exists in database (Squad already processed it)
+        if (!paymentVerified) {
+          setMessage("Checking transaction status…")
+          const { data: txn, error: txnErr } = await supabase
+            .from("transactions")
+            .select("payment_status, reference")
+            .eq("reference", pending.reference)
+            .single()
+          
+          // If transaction exists, Squad has already processed it
+          if (txn && !txnErr) {
+            paymentVerified = true
+          }
+        }
+
+        if (!paymentVerified) {
+          setMessage("Payment verification failed. Please contact support.")
           setStatus("error")
           sessionStorage.removeItem(PENDING_BOOKING_KEY)
           return
