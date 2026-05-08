@@ -1,283 +1,104 @@
 import { useState, useEffect } from "react"
-import {
-  Box,
-  Text,
-  Input,
-  Button,
-  Badge,
-  HStack,
-  VStack,
-} from "@chakra-ui/react"
+import { Box, Text, VStack, HStack, SimpleGrid } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
+import type { GalaTable, TicketTier } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
-import Papa from "papaparse"
 
-type AttendeeRow = {
-  id: string
-  first_name: string
-  last_name: string
-  email: string
-  ticket_id: string
-  group_booking_code: string
-  table_number: number
-  is_primary: boolean
-  qr_used_at: string | null
-  created_at: string
-  tier_name: string | null
-  payment_status: string | null
-}
+type TierWithTables = TicketTier & { tables: GalaTable[] }
 
-export function AttendeeList() {
-  const [attendees, setAttendees] = useState<AttendeeRow[]>([])
-  const [search, setSearch] = useState("")
-  const [loading, setLoading] = useState(true)
+export function TableMap() {
+  const [tiers, setTiers] = useState<TierWithTables[]>([])
 
   const fetchData = async () => {
-    const { data } = await supabase
-      .from("attendees")
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        ticket_id,
-        group_booking_code,
-        table_number,
-        is_primary,
-        qr_used_at,
-        created_at,
-        tier_id,
-        transaction_id,
-        ticket_tiers (name),
-        transactions (payment_status)
-      `)
-      .order("created_at", { ascending: false })
-
-    if (data) {
-      setAttendees(
-        data.map((row: any) => ({
-          id: row.id,
-          first_name: row.first_name,
-          last_name: row.last_name,
-          email: row.email,
-          ticket_id: row.ticket_id,
-          group_booking_code: row.group_booking_code,
-          table_number: row.table_number,
-          is_primary: row.is_primary,
-          qr_used_at: row.qr_used_at,
-          created_at: row.created_at,
-          // ✅ Extract scalars only — joined objects never enter state
-          tier_name: Array.isArray(row.ticket_tiers)
-            ? (row.ticket_tiers[0]?.name ?? null)
-            : (row.ticket_tiers?.name ?? null),
-          payment_status: Array.isArray(row.transactions)
-            ? (row.transactions[0]?.payment_status ?? null)
-            : (row.transactions?.payment_status ?? null),
+    const { data: tierData } = await supabase.from("ticket_tiers").select("*").order("price_kobo")
+    const { data: tableData } = await supabase.from("gala_tables").select("*")
+    if (tierData && tableData) {
+      setTiers(
+        tierData.map((t) => ({
+          ...t,
+          tables: tableData.filter((tb) => tb.tier_id === t.id),
         }))
       )
     }
-    setLoading(false)
   }
 
   useEffect(() => {
     fetchData()
-    const ch = supabase
-      .channel("admin-attendees")
-      .on("postgres_changes", { event: "*", schema: "public", table: "attendees" }, fetchData)
-      .subscribe()
+    const ch = supabase.channel("admin-tables").on(
+      "postgres_changes", { event: "*", schema: "public", table: "gala_tables" }, fetchData
+    ).subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [])
 
-  const filtered = attendees.filter((a) => {
-    const q = search.toLowerCase()
-    return (
-      a.first_name.toLowerCase().includes(q) ||
-      a.last_name.toLowerCase().includes(q) ||
-      a.email.toLowerCase().includes(q) ||
-      a.ticket_id.toLowerCase().includes(q) ||
-      (a.tier_name ?? "").toLowerCase().includes(q)
-    )
-  })
-
-  const exportCsv = () => {
-    const csv = Papa.unparse(
-      filtered.map((a) => ({
-        "First Name": a.first_name,
-        "Last Name": a.last_name,
-        "Email": a.email,
-        "Tier": a.tier_name ?? "—",
-        "Table #": a.table_number,
-        "Ticket ID": a.ticket_id,
-        "Group Code": a.group_booking_code,
-        "Primary?": a.is_primary ? "Yes" : "No",
-        "Payment Status": a.payment_status ?? "—",
-        "QR Used": a.qr_used_at ? "Yes" : "No",
-        "Booking Date": a.created_at,
-      }))
-    )
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `busa-gala-attendees-${Date.now()}.csv`
-    a.click()
+  const getColor = (table: GalaTable) => {
+    const ratio = table.seats_booked / table.seats_total
+    if (ratio === 0) return "#22c55e"
+    if (ratio < 0.8) return "#22c55e"
+    if (ratio < 1) return "#F97316"
+    return "#ef4444"
   }
 
-  const thStyle = {
-    fontFamily: "'Josefin Sans', sans-serif",
-    fontSize: "0.55rem",
-    letterSpacing: "0.2em",
-    color: COLORS.GOLD_DIM,
-    textTransform: "uppercase" as const,
-    padding: "8px 12px",
-    borderBottom: `1px solid ${COLORS.GOLD_DIM}30`,
-    whiteSpace: "nowrap" as const,
-  }
-
-  const tdStyle = {
-    fontFamily: "'Josefin Sans', sans-serif",
-    fontSize: "0.65rem",
-    color: COLORS.GOLD_BASE,
-    padding: "8px 12px",
-    borderBottom: `1px solid ${COLORS.GOLD_DIM}15`,
-    whiteSpace: "nowrap" as const,
+  const getLabel = (table: GalaTable) => {
+    if (table.seats_booked >= table.seats_total) return "FULL"
+    if (table.seats_booked / table.seats_total >= 0.8) return "~FULL"
+    return "OK"
   }
 
   return (
-    <VStack gap="4" align="stretch">
-      <HStack gap="4">
-        <Input
-          placeholder="Search by name, email, ticket ID..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          flex="1"
-          style={{
-            background: `${COLORS.PANEL_MID}60`,
-            border: `1px solid ${COLORS.GOLD_DIM}40`,
-            color: COLORS.GOLD_BASE,
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: "0.75rem",
-          }}
-        />
-        <Button
-          onClick={exportCsv}
-          style={{
-            background: "transparent",
-            border: `1px solid ${COLORS.GOLD_DIM}60`,
-            color: COLORS.GOLD_BASE,
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: "0.6rem",
-            letterSpacing: "0.15em",
-            cursor: "pointer",
-            height: "40px",
-            padding: "0 16px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Export CSV
-        </Button>
-      </HStack>
-
-      <Text
-        style={{
-          fontFamily: "'Josefin Sans', sans-serif",
-          fontSize: "0.6rem",
-          color: COLORS.GOLD_DIM,
-          letterSpacing: "0.1em",
-        }}
-      >
-        {filtered.length} attendee{filtered.length !== 1 ? "s" : ""} found
-      </Text>
-
-      <Box overflowX="auto">
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              {["Name", "Email", "Tier", "Table", "Ticket ID", "Group Code", "Status", "QR"].map((h) => (
-                <th key={h} style={thStyle}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>
-                  Loading...
-                </td>
-              </tr>
-            ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>
-                  No attendees found
-                </td>
-              </tr>
-            ) : (
-              filtered.map((a) => (
-                <tr
-                  key={a.id}
-                  style={{ transition: "background 0.2s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${COLORS.GOLD_GLOW}08` }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
-                >
-                  <td style={tdStyle}>
-                    {a.first_name} {a.last_name}{a.is_primary ? " ✦" : ""}
-                  </td>
-                  <td style={tdStyle}>{a.email}</td>
-                  <td style={tdStyle}>
-                    <Badge
-                      style={{
-                        background:
-                          a.tier_name === "VVIP"
-                            ? `linear-gradient(135deg, ${COLORS.GOLD_DIM}, ${COLORS.GOLD_BRIGHT})`
-                            : a.tier_name === "VIP"
-                            ? `${COLORS.GOLD_GLOW}40`
-                            : `${COLORS.PANEL}`,
-                        color: a.tier_name === "VVIP" ? COLORS.BG : COLORS.GOLD_BASE,
-                        fontFamily: "'Josefin Sans', sans-serif",
-                        fontSize: "0.5rem",
-                        letterSpacing: "0.1em",
-                        border: `1px solid ${COLORS.GOLD_DIM}40`,
-                      }}
-                    >
-                      {a.tier_name ?? "—"}
-                    </Badge>
-                  </td>
-                  <td style={tdStyle}>{a.table_number}</td>
-                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>
-                    {a.ticket_id}
-                  </td>
-                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>
-                    {a.group_booking_code}
-                  </td>
-                  <td style={tdStyle}>
-                    <Badge
-                      style={{
-                        background: a.payment_status === "confirmed" ? "#22c55e20" : "#F9731620",
-                        color: a.payment_status === "confirmed" ? "#22c55e" : "#F97316",
-                        fontSize: "0.5rem",
-                        fontFamily: "'Josefin Sans', sans-serif",
-                        border: `1px solid ${a.payment_status === "confirmed" ? "#22c55e40" : "#F9731640"}`,
-                      }}
-                    >
-                      {a.payment_status ?? "—"}
-                    </Badge>
-                  </td>
-                  <td style={tdStyle}>
-                    <Box
-                      w="8px"
-                      h="8px"
-                      borderRadius="full"
-                      style={{
-                        backgroundColor: a.qr_used_at ? "#22c55e" : `${COLORS.GOLD_DIM}40`,
-                      }}
-                    />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+    <VStack gap="10" align="stretch">
+      <Box display="flex" gap="6" flexWrap="wrap">
+        {[
+          { color: "#22c55e", label: "Available" },
+          { color: "#F97316", label: "Almost Full" },
+          { color: "#ef4444", label: "Full" },
+        ].map(({ color, label }) => (
+          <Box key={label} display="flex" alignItems="center" gap="2">
+            <Box w="12px" h="12px" borderRadius="full" style={{ backgroundColor: color }} />
+            <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.65rem", color: COLORS.GOLD_DIM }}>
+              {label}
+            </Text>
+          </Box>
+        ))}
       </Box>
+
+      {tiers.map((tier) => {
+        const totalBooked = tier.tables.reduce((s, t) => s + t.seats_booked, 0)
+        return (
+          <Box key={tier.id}>
+            <HStack gap="3" mb="4" align="center">
+              <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.4rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>
+                {tier.name}
+              </Text>
+              <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", letterSpacing: "0.1em", color: COLORS.GOLD_DIM }}>
+                {totalBooked} / {tier.max_capacity} seats booked
+              </Text>
+            </HStack>
+            <SimpleGrid columns={{ base: 5, md: 10 }} gap="2">
+              {tier.tables.sort((a, b) => a.table_number - b.table_number).map((table) => (
+                <Box
+                  key={table.id}
+                  p="2"
+                  textAlign="center"
+                  style={{
+                    border: `2px solid ${getColor(table)}`,
+                    background: `${getColor(table)}15`,
+                  }}
+                >
+                  <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.65rem", color: COLORS.GOLD_BASE, fontWeight: "600" }}>
+                    T{table.table_number}
+                  </Text>
+                  <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: getColor(table) }}>
+                    {table.seats_booked}/{table.seats_total}
+                  </Text>
+                  <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.45rem", color: getColor(table), opacity: 0.8 }}>
+                    {getLabel(table)}
+                  </Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Box>
+        )
+      })}
     </VStack>
   )
 }
