@@ -14,11 +14,13 @@ import {
   Badge,
   SimpleGrid,
   Textarea,
+  Tabs,
 } from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
 import { confirmBooking, type PendingBooking } from "@/lib/confirmBooking"
 import { toaster } from "@/components/ui/toaster"
+import { ResendEmails } from "./ResendEmails"
 
 declare const __SUPABASE_URL__: string
 declare const __SUPABASE_ANON_KEY__: string
@@ -39,6 +41,7 @@ interface PendingTransaction {
 }
 
 export function ManualConfirmation() {
+  const [activeTab, setActiveTab] = useState<"confirm" | "resend">("confirm")
   const [reference, setReference] = useState("")
   const [transaction, setTransaction] = useState<PendingTransaction | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -174,13 +177,18 @@ export function ManualConfirmation() {
   }
 
   return (
-    <VStack spacing={6} w="100%">
-      {/* Manual Search */}
-      <Card w="100%" bg={`${COLORS.PANEL_MID}40`} borderColor={COLORS.ACCENT} borderWidth={1}>
-        <CardHeader bg={`${COLORS.GOLD_GLOW}10`} borderBottomWidth={1} borderBottomColor={COLORS.ACCENT}>
-          <Heading size="md" color={COLORS.GOLD_BASE}>
-            Manual Transaction Confirmation
-          </Heading>
+    <VStack spacing={6} align="stretch">
+      <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
+        <Tabs.List>
+          <Tabs.Trigger value="confirm">Confirm Bookings</Tabs.Trigger>
+          <Tabs.Trigger value="resend">Resend Emails</Tabs.Trigger>
+        </Tabs.List>
+
+        <Tabs.Content value="confirm">
+          <VStack spacing={6} align="stretch">
+            <Heading as="h2" size="lg" color={COLORS.GOLD_BASE}>
+              Manual Booking Recovery
+            </Heading>
         </CardHeader>
         <CardBody>
           <VStack spacing={4}>
@@ -244,72 +252,15 @@ export function ManualConfirmation() {
                     </Text>
                     <Text color={COLORS.TEXT}>Table {transaction.table_number}</Text>
                   </Box>
-                </SimpleGrid>
-                <Box mb={4} p={2} bg={`${COLORS.GOLD_GLOW}10`} borderRadius="sm">
-                  <Text fontSize="sm" color={COLORS.TEXT}>
-                    <strong>Group Code:</strong> {transaction.group_code}
-                  </Text>
-                  <Text fontSize="xs" color={COLORS.TEXT_MUTED}>
-                    {transaction.attendees_count} attendee{transaction.attendees_count !== 1 ? "s" : ""} created
-                  </Text>
-                </Box>
-                <Button
-                  onClick={() => confirmTransaction(transaction)}
-                  isLoading={isConfirming}
-                  w="100%"
-                  colorScheme="green"
-                >
-                  Confirm & Send Tickets
-                </Button>
-              </Box>
-            )}
-          </VStack>
-        </CardBody>
-      </Card>
-
-      {/* Pending Transactions List */}
-      {pendingTransactions.length > 0 && (
-        <Card w="100%" bg={`${COLORS.PANEL_MID}40`} borderColor={COLORS.ACCENT} borderWidth={1}>
-          <CardHeader bg={`${COLORS.GOLD_GLOW}10`} borderBottomWidth={1} borderBottomColor={COLORS.ACCENT}>
-            <Heading size="md" color={COLORS.GOLD_BASE}>
-              All Pending Transactions ({pendingTransactions.length})
-            </Heading>
-          </CardHeader>
-          <CardBody>
-            <VStack spacing={3} align="stretch">
-              {pendingTransactions.map((txn) => (
-                <Box
-                  key={txn.id}
-                  p={3}
-                  bg={COLORS.BG}
-                  borderRadius="md"
-                  borderLeft={`4px solid ${COLORS.GOLD_BASE}`}
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box>
-                    <Text color={COLORS.GOLD_BASE} fontWeight="600" fontSize="sm">
-                      {txn.reference}
-                    </Text>
-                    <Text color={COLORS.TEXT} fontSize="xs">
-                      {txn.tier_name} · {txn.quantity} ticket(s) · Table {txn.table_number}
-                    </Text>
-                  </Box>
-                  <Button
-                    size="sm"
-                    colorScheme="green"
-                    isLoading={isConfirming}
-                    onClick={() => confirmTransaction(txn)}
-                  >
-                    Confirm
-                  </Button>
-                </Box>
-              ))}
-            </VStack>
-          </CardBody>
-        </Card>
+        </SimpleGrid>
       )}
+          </VStack>
+        </Tabs.Content>
+
+        <Tabs.Content value="resend">
+          <ResendEmails />
+        </Tabs.Content>
+      </Tabs>
     </VStack>
   )
 }
