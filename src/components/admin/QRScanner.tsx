@@ -70,7 +70,6 @@ export function QRScanner() {
       ticketId = parsed.ticket_id || qrData
     } catch {}
 
-    // ✅ Select only scalar columns — no join
     const { data: attendee, error } = await supabase
       .from("attendees")
       .select("id, first_name, last_name, table_number, ticket_id, qr_used_at, tier_id")
@@ -82,7 +81,6 @@ export function QRScanner() {
       return
     }
 
-    // ✅ Fetch tier name separately as a scalar
     const { data: tierData } = await supabase
       .from("ticket_tiers")
       .select("name")
@@ -157,7 +155,7 @@ export function QRScanner() {
           background: "#000",
           display: "flex",
           alignItems: "center",
-          justifyContent="center",
+          justifyContent: "center",
         }}
       >
         {!scanning && (
@@ -270,7 +268,7 @@ export function QRScanner() {
               borderRadius="full"
               display="flex"
               alignItems="center"
-              justifyContent: "center"
+              justifyContent="center"
               style={{ background: resultColor, margin: "0 auto" }}
             >
               <Text style={{ fontSize: "2rem" }}>{result.valid ? "✓" : "✗"}</Text>
