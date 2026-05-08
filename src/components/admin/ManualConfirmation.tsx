@@ -111,8 +111,9 @@ export function ManualConfirmation() {
     }
   }
 
-  const confirmTransaction = async (txn: PendingTransaction) => {
-    if (!txn) return
+  const confirmTransaction = async (txn?: PendingTransaction) => {
+    const targetTxn = txn || transaction
+    if (!targetTxn) return
 
     setIsConfirming(true)
     try {
@@ -120,12 +121,12 @@ export function ManualConfirmation() {
       const { data: attendees } = await supabase
         .from("attendees")
         .select("first_name, email, is_primary")
-        .eq("transaction_id", txn.id)
+        .eq("transaction_id", targetTxn.id)
 
       const { data: table } = await supabase
         .from("gala_tables")
         .select("seats_booked, seats_total")
-        .eq("id", txn.table_id)
+        .eq("id", targetTxn.table_id)
         .single()
 
       if (!attendees || !table) {
@@ -135,16 +136,16 @@ export function ManualConfirmation() {
 
       // Build PendingBooking object
       const pending: PendingBooking = {
-        txnId: txn.id,
-        reference: txn.reference,
-        groupCode: txn.group_code,
-        tierId: txn.tier_id,
-        tierName: txn.tier_name,
-        tableId: txn.table_id,
-        tableNumber: txn.table_number,
+        txnId: targetTxn.id,
+        reference: targetTxn.reference,
+        groupCode: targetTxn.group_code,
+        tierId: targetTxn.tier_id,
+        tierName: targetTxn.tier_name,
+        tableId: targetTxn.table_id,
+        tableNumber: targetTxn.table_number,
         tableSeatsBooked: table.seats_booked,
         tableSeatsTotal: table.seats_total,
-        quantity: txn.quantity,
+        quantity: targetTxn.quantity,
         attendees: attendees.map((a) => ({
           firstName: a.first_name,
           email: a.email,
@@ -157,7 +158,7 @@ export function ManualConfirmation() {
 
       toaster.create({
         title: `✓ Confirmed!`,
-        description: `${txn.quantity} tickets for ${txn.group_code}. Confirmation email sent.`,
+        description: `${targetTxn.quantity} tickets for ${targetTxn.group_code}. Confirmation email sent.`,
         type: "success",
       })
 
