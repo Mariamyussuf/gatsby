@@ -239,7 +239,7 @@ export function ManualConfirmation() {
                           <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
                             Amount
                           </Text>
-                          <Text color={COLORS.TEXT}>₦{transaction.amount.toLocaleString()}</Text>
+                          <Text color={COLORS.TEXT}>NGN {transaction.amount.toLocaleString()}</Text>
                         </Box>
                         <Box>
                           <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
@@ -317,7 +317,7 @@ export function ManualConfirmation() {
                           <Badge colorScheme="orange">{txn.payment_status}</Badge>
                         </HStack>
                         <Text color={COLORS.TEXT} fontSize="xs">
-                          {txn.tier_name} · {txn.quantity} ticket(s) · Table {txn.table_number}
+                          {txn.tier_name} • {txn.quantity} ticket(s) • Table {txn.table_number}
                         </Text>
                       </Box>
                     ))}
