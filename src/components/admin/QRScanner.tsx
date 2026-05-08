@@ -157,7 +157,7 @@ export function QRScanner() {
           background: "#000",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent="center",
         }}
       >
         {!scanning && (
