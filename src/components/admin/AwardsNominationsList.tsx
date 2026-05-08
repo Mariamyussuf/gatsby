@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Box, VStack, HStack, Text, Input, Badge, Button } from "@chakra-ui/react"
+import { Box, VStack, HStack, Text, Input, Badge, SimpleGrid, ScrollArea, Button } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import type { Database } from "@/lib/supabase"
@@ -21,11 +21,13 @@ export function AwardsNominationsList() {
 
   const fetchNominations = async () => {
     try {
+      // Fetch categories
       const { data: categories } = await supabase
         .from("award_categories")
         .select("*")
         .order("display_order", { ascending: true })
 
+      // Fetch all nominations
       const { data: allNominations } = await supabase
         .from("award_nominations")
         .select("*")
@@ -48,6 +50,7 @@ export function AwardsNominationsList() {
 
   useEffect(() => {
     fetchNominations()
+    // Poll for new nominations every 5 seconds
     const interval = setInterval(fetchNominations, 5000)
     return () => clearInterval(interval)
   }, [])
@@ -144,7 +147,7 @@ export function AwardsNominationsList() {
         />
       </Box>
 
-      {/* Category Filter */}
+      {/* Category Leaderboard */}
       <Box>
         <Text
           style={{
@@ -158,7 +161,7 @@ export function AwardsNominationsList() {
         >
           Categories
         </Text>
-        <Box style={{ width: "100%", overflowX: "auto", paddingBottom: "8px" }}>
+        <ScrollArea style={{ width: "100%", overflow: "auto", paddingBottom: "8px" }}>
           <HStack gap="2" wrap="wrap">
             <Button
               onClick={() => setSelectedCategory(null)}
@@ -195,7 +198,7 @@ export function AwardsNominationsList() {
               </Button>
             ))}
           </HStack>
-        </Box>
+        </ScrollArea>
       </Box>
 
       {/* Nominations List */}
