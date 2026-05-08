@@ -4,6 +4,9 @@ import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import { toaster } from "@/components/ui/toaster"
 
+declare const __SUPABASE_URL__: string
+declare const __SUPABASE_ANON_KEY__: string
+
 export function ResendEmails() {
   const [groupCode, setGroupCode] = useState("")
   const [isSearching, setIsSearching] = useState(false)
@@ -45,9 +48,7 @@ export function ResendEmails() {
 
     setIsSending(true)
     try {
-      const declare = `${__SUPABASE_URL__}` // This will be replaced at build time
-      
-      const response = await fetch(`${declare}/functions/v1/send-confirmation-email`, {
+      const response = await fetch(`${__SUPABASE_URL__}/functions/v1/send-confirmation-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -60,14 +61,14 @@ export function ResendEmails() {
         throw new Error(`Edge function returned ${response.status}`)
       }
 
-      const result = await response.json()
-      
+      await response.json()
+
       toaster.create({
         title: "Emails sent successfully!",
         description: `Sent ${attendees.length} confirmation email(s)`,
         type: "success",
       })
-      
+
       setGroupCode("")
       setAttendees([])
     } catch (err: any) {
@@ -97,7 +98,7 @@ export function ResendEmails() {
               placeholder="Enter group code (e.g., GAL-ABC123)"
               value={groupCode}
               onChange={(e) => setGroupCode(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               disabled={isSearching}
               style={{
                 borderColor: COLORS.GOLD_GLOW,
@@ -130,7 +131,8 @@ export function ResendEmails() {
                     <Text fontSize="xs" color={COLORS.TEXT_MUTED}>
                       {att.email}
                     </Text>
-                    <Badge colorScheme="gold">{att.ticket_id}</Badge>
+                    {/* ✅ Fixed: "yellow" is a valid Chakra colorScheme, closest to gold */}
+                    <Badge colorScheme="yellow">{att.ticket_id}</Badge>
                   </HStack>
                 ))}
               </VStack>
@@ -146,9 +148,11 @@ export function ResendEmails() {
                 _hover={{ opacity: 0.9 }}
               >
                 {isSending ? (
-                  <>
-                    <Spinner size="sm" mr={2} /> Sending...
-                  </>
+                  // ✅ Fixed: use HStack to space Spinner and text, not mr prop on Spinner
+                  <HStack spacing={2}>
+                    <Spinner size="sm" />
+                    <Text>Sending...</Text>
+                  </HStack>
                 ) : (
                   `Send Confirmation Emails (${attendees.length})`
                 )}
