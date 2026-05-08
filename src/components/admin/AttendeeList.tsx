@@ -46,6 +46,8 @@ export function AttendeeList() {
         is_primary,
         qr_used_at,
         created_at,
+        tier_id,
+        transaction_id,
         ticket_tiers (name),
         transactions (payment_status)
       `)
@@ -64,6 +66,7 @@ export function AttendeeList() {
           is_primary: row.is_primary,
           qr_used_at: row.qr_used_at,
           created_at: row.created_at,
+          // ✅ Extract scalars only — joined objects never enter state
           tier_name: Array.isArray(row.ticket_tiers)
             ? (row.ticket_tiers[0]?.name ?? null)
             : (row.ticket_tiers?.name ?? null),
