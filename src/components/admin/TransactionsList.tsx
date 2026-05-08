@@ -7,7 +7,6 @@ import {
   Badge,
   HStack,
   VStack,
-  Table,
 } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
@@ -25,7 +24,7 @@ type TransactionRow = {
   payment_status: string
   created_at: string
   confirmed_at: string | null
-  tier_name?: string
+  tier_name: string | null
   group_booking_code: string
 }
 
@@ -39,42 +38,48 @@ export function TransactionsList() {
     const { data } = await supabase
       .from("transactions")
       .select(`
-        *,
-        ticket_tiers (name)
+        id,
+        reference,
+        squad_reference,
+        primary_email,
+        primary_first_name,
+        primary_last_name,
+        quantity,
+        total_kobo,
+        payment_status,
+        created_at,
+        confirmed_at,
+        group_booking_code,
+        tier_name
       `)
       .order("created_at", { ascending: false })
 
     if (data) {
-      setTransactions(
-        data.map((row: any) => ({
-          ...row,
-          tier_name: row.ticket_tiers?.name,
-        }))
-      )
+      setTransactions(data as TransactionRow[])
     }
     setLoading(false)
   }
 
   useEffect(() => {
     fetchData()
-    const ch = supabase.channel("admin-transactions")
+    const ch = supabase
+      .channel("admin-transactions")
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, fetchData)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [])
 
-  const filtered = transactions
-    .filter((t) => {
-      if (filterStatus !== "all" && t.payment_status !== filterStatus) return false
-      const q = search.toLowerCase()
-      return (
-        t.primary_email.toLowerCase().includes(q) ||
-        t.primary_first_name.toLowerCase().includes(q) ||
-        t.primary_last_name.toLowerCase().includes(q) ||
-        t.reference.toLowerCase().includes(q) ||
-        t.group_booking_code.toLowerCase().includes(q)
-      )
-    })
+  const filtered = transactions.filter((t) => {
+    if (filterStatus !== "all" && t.payment_status !== filterStatus) return false
+    const q = search.toLowerCase()
+    return (
+      t.primary_email.toLowerCase().includes(q) ||
+      t.primary_first_name.toLowerCase().includes(q) ||
+      t.primary_last_name.toLowerCase().includes(q) ||
+      t.reference.toLowerCase().includes(q) ||
+      t.group_booking_code.toLowerCase().includes(q)
+    )
+  })
 
   const exportCsv = () => {
     const csv = Papa.unparse(
@@ -84,7 +89,7 @@ export function TransactionsList() {
         "Squad Reference": t.squad_reference || "—",
         "Primary Name": `${t.primary_first_name} ${t.primary_last_name}`,
         "Email": t.primary_email,
-        "Tier": t.tier_name,
+        "Tier": t.tier_name ?? "—",
         "Quantity": t.quantity,
         "Total": `₦${(t.total_kobo / 100).toLocaleString()}`,
         "Status": t.payment_status,
@@ -128,16 +133,28 @@ export function TransactionsList() {
       {/* Stats */}
       <HStack gap="4">
         <Box p="3" style={{ border: `1px solid ${COLORS.GOLD_DIM}40`, background: `${COLORS.PANEL_MID}40` }}>
-          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>All Transactions</Text>
-          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>{transactions.length}</Text>
+          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>
+            All Transactions
+          </Text>
+          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>
+            {transactions.length}
+          </Text>
         </Box>
         <Box p="3" style={{ border: `1px solid ${COLORS.GOLD_DIM}40`, background: `${COLORS.PANEL_MID}40` }}>
-          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>Confirmed</Text>
-          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: "#22c55e" }}>{confirmedCount}</Text>
+          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>
+            Confirmed
+          </Text>
+          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: "#22c55e" }}>
+            {confirmedCount}
+          </Text>
         </Box>
         <Box p="3" style={{ border: `1px solid ${COLORS.GOLD_DIM}40`, background: `${COLORS.PANEL_MID}40` }}>
-          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>Pending / Abandoned</Text>
-          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: "#F97316" }}>{pendingCount}</Text>
+          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>
+            Pending / Abandoned
+          </Text>
+          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: "#F97316" }}>
+            {pendingCount}
+          </Text>
         </Box>
       </HStack>
 
@@ -207,11 +224,12 @@ export function TransactionsList() {
         {filtered.length} transaction{filtered.length !== 1 ? "s" : ""} found
       </Text>
 
+      {/* Table */}
       <Box overflowX="auto">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["Group Code", "Reference", "Name", "Email", "Qty", "Amount", "Status", "Confirmed"].map((h) => (
+              {["Group Code", "Reference", "Name", "Email", "Tier", "Qty", "Amount", "Status", "Confirmed"].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
@@ -219,13 +237,13 @@ export function TransactionsList() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>
+                <td colSpan={9} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>
                   Loading...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>
+                <td colSpan={9} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>
                   No transactions found
                 </td>
               </tr>
@@ -237,10 +255,17 @@ export function TransactionsList() {
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${COLORS.GOLD_GLOW}08` }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
                 >
-                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>{t.group_booking_code}</td>
-                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>{t.reference.substring(0, 12)}…</td>
-                  <td style={tdStyle}>{t.primary_first_name} {t.primary_last_name}</td>
+                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>
+                    {t.group_booking_code}
+                  </td>
+                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>
+                    {t.reference.substring(0, 12)}…
+                  </td>
+                  <td style={tdStyle}>
+                    {t.primary_first_name} {t.primary_last_name}
+                  </td>
                   <td style={tdStyle}>{t.primary_email}</td>
+                  <td style={tdStyle}>{t.tier_name ?? "—"}</td>
                   <td style={tdStyle}>{t.quantity}</td>
                   <td style={tdStyle}>₦{(t.total_kobo / 100).toLocaleString()}</td>
                   <td style={tdStyle}>
