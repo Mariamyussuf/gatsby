@@ -13,7 +13,6 @@ import {
   Spinner,
   Badge,
   SimpleGrid,
-  Textarea,
   Tabs,
 } from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
@@ -21,9 +20,6 @@ import { supabase } from "@/lib/supabase"
 import { confirmBooking, type PendingBooking } from "@/lib/confirmBooking"
 import { toaster } from "@/components/ui/toaster"
 import { ResendEmails } from "./ResendEmails"
-
-declare const __SUPABASE_URL__: string
-declare const __SUPABASE_ANON_KEY__: string
 
 interface PendingTransaction {
   id: string
@@ -48,7 +44,6 @@ export function ManualConfirmation() {
   const [isConfirming, setIsConfirming] = useState(false)
   const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([])
 
-  // Load all pending transactions on mount
   useEffect(() => {
     loadPendingTransactions()
   }, [])
@@ -86,26 +81,27 @@ export function ManualConfirmation() {
 
     setIsLoading(true)
     try {
-      const { data: txn, error } = await supabase
+      const { data: txn } = await supabase
         .from("transactions")
         .select("id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at")
         .eq("reference", reference.trim())
         .single()
 
-      if (error || !txn) {
+      if (!txn) {
         toaster.create({ title: "Transaction not found", type: "error" })
         setTransaction(null)
-      } else {
-        const { count } = await supabase
-          .from("attendees")
-          .select("*", { count: "exact", head: true })
-          .eq("transaction_id", txn.id)
-
-        setTransaction({
-          ...txn,
-          attendees_count: count ?? 0,
-        })
+        return
       }
+
+      const { count } = await supabase
+        .from("attendees")
+        .select("*", { count: "exact", head: true })
+        .eq("transaction_id", txn.id)
+
+      setTransaction({
+        ...txn,
+        attendees_count: count ?? 0,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -117,7 +113,6 @@ export function ManualConfirmation() {
 
     setIsConfirming(true)
     try {
-      // Get transaction details to build PendingBooking
       const { data: attendees } = await supabase
         .from("attendees")
         .select("first_name, email, is_primary")
@@ -134,7 +129,6 @@ export function ManualConfirmation() {
         return
       }
 
-      // Build PendingBooking object
       const pending: PendingBooking = {
         txnId: targetTxn.id,
         reference: targetTxn.reference,
@@ -153,23 +147,21 @@ export function ManualConfirmation() {
         })),
       }
 
-      // Confirm the booking
       await confirmBooking(pending)
 
       toaster.create({
-        title: `✓ Confirmed!`,
-        description: `${targetTxn.quantity} tickets for ${targetTxn.group_code}. Confirmation email sent.`,
+        title: "Confirmed!",
+        description: `${targetTxn.quantity} tickets for ${targetTxn.group_code}`,
         type: "success",
       })
 
       setTransaction(null)
       setReference("")
-      loadPendingTransactions()
+      await loadPendingTransactions()
     } catch (err: any) {
-      console.error("Confirmation error:", err)
       toaster.create({
         title: "Confirmation failed",
-        description: err.message === "TABLE_FULL" ? "Table is full" : err.message,
+        description: err.message,
         type: "error",
       })
     } finally {
@@ -186,146 +178,16 @@ export function ManualConfirmation() {
         </Tabs.List>
 
         <Tabs.Content value="confirm">
-          <VStack spacing={6} align="stretch">
-            <Heading as="h2" size="lg" color={COLORS.GOLD_BASE}>
-              Manual Booking Recovery
-            </Heading>
-
-            <Card bg={COLORS.PANEL_MID} borderColor={COLORS.ACCENT} borderWidth={1}>
-              <CardHeader borderBottomWidth={1} borderColor={COLORS.ACCENT}>
-                <Heading as="h3" size="md" color={COLORS.GOLD_BASE}>
-                  Search Transaction
-                </Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack spacing={4}>
-                  <Text color={COLORS.TEXT} fontSize="sm">
-                    Enter a transaction reference to search for and manually confirm bookings that failed due to errors.
-                  </Text>
-                  <HStack w="100%">
-                    <Input
-                      placeholder="e.g., BUSA-2026-001..."
-                      value={reference}
-                      onChange={(e) => setReference(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && searchTransaction()}
-                      bg={COLORS.INPUT_BG}
-                      color={COLORS.TEXT}
-                      borderColor={COLORS.ACCENT}
-                      _placeholder={{ color: COLORS.TEXT_MUTED }}
-                    />
-                    <Button onClick={searchTransaction} isLoading={isLoading} colorScheme="orange" minW="120px">
-                      Search
-                    </Button>
-                  </HStack>
-
-                  {transaction && (
-                    <Box w="100%" p={4} bg={COLORS.BG} borderRadius="md" borderColor={COLORS.ACCENT} borderWidth={1}>
-                      <SimpleGrid columns={2} spacing={2} mb={4}>
-                        <Box>
-                          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                            Reference
-                          </Text>
-                          <Text color={COLORS.GOLD_BASE} fontWeight="600">
-                            {transaction.reference}
-                          </Text>
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                            Status
-                          </Text>
-                          <Badge colorScheme="orange">{transaction.payment_status}</Badge>
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                            Amount
-                          </Text>
-                          <Text color={COLORS.TEXT}>NGN {transaction.amount.toLocaleString()}</Text>
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                            Quantity
-                          </Text>
-                          <Text color={COLORS.TEXT}>{transaction.quantity} tickets</Text>
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                            Tier
-                          </Text>
-                          <Text color={COLORS.TEXT}>{transaction.tier_name}</Text>
-                        </Box>
-                        <Box>
-                          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
-                            Table
-                          </Text>
-                          <Text color={COLORS.TEXT}>Table {transaction.table_number}</Text>
-                        </Box>
-                      </SimpleGrid>
-                    </Box>
-                  )}
-
-                  {isLoading && <Spinner color={COLORS.GOLD_BASE} />}
-                  {!transaction && !isLoading && reference && (
-                    <Text color="red.500" fontSize="sm">
-                      Transaction not found
-                    </Text>
-                  )}
-                </VStack>
-              </CardBody>
-            </Card>
-
-            {transaction && (
-              <Card bg={COLORS.PANEL_MID} borderColor={COLORS.ACCENT} borderWidth={1}>
-                <CardBody>
-                  <Button
-                    w="100%"
-                    onClick={confirmTransaction}
-                    isLoading={isConfirming}
-                    colorScheme="green"
-                    size="lg"
-                  >
-                    Confirm & Send Tickets
-                  </Button>
-                </CardBody>
-              </Card>
-            )}
-
-            {pendingTransactions.length > 0 && (
-              <Card bg={COLORS.PANEL_MID} borderColor={COLORS.ACCENT} borderWidth={1}>
-                <CardHeader borderBottomWidth={1} borderColor={COLORS.ACCENT}>
-                  <Heading as="h3" size="md" color={COLORS.GOLD_BASE}>
-                    All Pending Transactions
-                  </Heading>
-                </CardHeader>
-                <CardBody>
-                  <SimpleGrid columns={1} spacing={3}>
-                    {pendingTransactions.map((txn) => (
-                      <Box
-                        key={txn.id}
-                        p={3}
-                        bg={COLORS.BG}
-                        borderRadius="md"
-                        borderColor={COLORS.ACCENT}
-                        borderWidth={1}
-                        cursor="pointer"
-                        onClick={() => setReference(txn.reference)}
-                        _hover={{ bg: `${COLORS.ACCENT}20` }}
-                      >
-                        <HStack justify="space-between" mb={2}>
-                          <Text color={COLORS.GOLD_BASE} fontWeight="600" fontSize="sm">
-                            {txn.reference}
-                          </Text>
-                          <Badge colorScheme="orange">{txn.payment_status}</Badge>
-                        </HStack>
-                        <Text color={COLORS.TEXT} fontSize="xs">
-                          {txn.tier_name} • {txn.quantity} ticket(s) • Table {txn.table_number}
-                        </Text>
-                      </Box>
-                    ))}
-                  </SimpleGrid>
-                </CardBody>
-              </Card>
-            )}
-          </VStack>
+          <SearchTransactionSection
+            reference={reference}
+            setReference={setReference}
+            transaction={transaction}
+            isLoading={isLoading}
+            onSearch={searchTransaction}
+            onConfirm={confirmTransaction}
+            isConfirming={isConfirming}
+            pendingTransactions={pendingTransactions}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="resend">
@@ -333,5 +195,174 @@ export function ManualConfirmation() {
         </Tabs.Content>
       </Tabs>
     </VStack>
+  )
+}
+
+interface SearchSectionProps {
+  reference: string
+  setReference: (val: string) => void
+  transaction: PendingTransaction | null
+  isLoading: boolean
+  onSearch: () => void
+  onConfirm: (txn?: PendingTransaction) => void
+  isConfirming: boolean
+  pendingTransactions: PendingTransaction[]
+}
+
+function SearchTransactionSection({
+  reference,
+  setReference,
+  transaction,
+  isLoading,
+  onSearch,
+  onConfirm,
+  isConfirming,
+  pendingTransactions,
+}: SearchSectionProps) {
+  return (
+    <VStack spacing={6} align="stretch">
+      <Heading as="h2" size="lg" color={COLORS.GOLD_BASE}>
+        Manual Booking Recovery
+      </Heading>
+
+      <Card bg={COLORS.PANEL_MID} borderColor={COLORS.ACCENT} borderWidth={1}>
+        <CardHeader borderBottomWidth={1} borderColor={COLORS.ACCENT}>
+          <Heading as="h3" size="md" color={COLORS.GOLD_BASE}>
+            Search Transaction
+          </Heading>
+        </CardHeader>
+        <CardBody>
+          <VStack spacing={4}>
+            <Text color={COLORS.TEXT} fontSize="sm">
+              Enter a transaction reference to search for and manually confirm bookings.
+            </Text>
+            <HStack w="100%">
+              <Input
+                placeholder="e.g., BUSA-2026-001..."
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                bg={COLORS.INPUT_BG}
+                color={COLORS.TEXT}
+                borderColor={COLORS.ACCENT}
+                _placeholder={{ color: COLORS.TEXT_MUTED }}
+              />
+              <Button onClick={onSearch} isLoading={isLoading} colorScheme="orange" minW="120px">
+                Search
+              </Button>
+            </HStack>
+
+            {transaction && <TransactionDetails transaction={transaction} />}
+
+            {isLoading && <Spinner color={COLORS.GOLD_BASE} />}
+            {!transaction && !isLoading && reference && (
+              <Text color="red.500" fontSize="sm">
+                Transaction not found
+              </Text>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
+
+      {transaction && (
+        <Card bg={COLORS.PANEL_MID} borderColor={COLORS.ACCENT} borderWidth={1}>
+          <CardBody>
+            <Button
+              w="100%"
+              onClick={() => onConfirm(transaction)}
+              isLoading={isConfirming}
+              colorScheme="green"
+              size="lg"
+            >
+              Confirm and Send Tickets
+            </Button>
+          </CardBody>
+        </Card>
+      )}
+
+      {pendingTransactions.length > 0 && (
+        <Card bg={COLORS.PANEL_MID} borderColor={COLORS.ACCENT} borderWidth={1}>
+          <CardHeader borderBottomWidth={1} borderColor={COLORS.ACCENT}>
+            <Heading as="h3" size="md" color={COLORS.GOLD_BASE}>
+              All Pending Transactions
+            </Heading>
+          </CardHeader>
+          <CardBody>
+            <SimpleGrid columns={1} spacing={3}>
+              {pendingTransactions.map((txn) => (
+                <Box
+                  key={txn.id}
+                  p={3}
+                  bg={COLORS.BG}
+                  borderRadius="md"
+                  borderColor={COLORS.ACCENT}
+                  borderWidth={1}
+                  cursor="pointer"
+                  onClick={() => setReference(txn.reference)}
+                  _hover={{ bg: `${COLORS.ACCENT}20` }}
+                >
+                  <HStack justify="space-between" mb={2}>
+                    <Text color={COLORS.GOLD_BASE} fontWeight="600" fontSize="sm">
+                      {txn.reference}
+                    </Text>
+                    <Badge colorScheme="orange">{txn.payment_status}</Badge>
+                  </HStack>
+                  <Text color={COLORS.TEXT} fontSize="xs">
+                    {txn.tier_name} • {txn.quantity} ticket(s) • Table {txn.table_number}
+                  </Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </CardBody>
+        </Card>
+      )}
+    </VStack>
+  )
+}
+
+function TransactionDetails({ transaction }: { transaction: PendingTransaction }) {
+  return (
+    <Box w="100%" p={4} bg={COLORS.BG} borderRadius="md" borderColor={COLORS.ACCENT} borderWidth={1}>
+      <SimpleGrid columns={2} spacing={2}>
+        <Box>
+          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
+            Reference
+          </Text>
+          <Text color={COLORS.GOLD_BASE} fontWeight="600">
+            {transaction.reference}
+          </Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
+            Status
+          </Text>
+          <Badge colorScheme="orange">{transaction.payment_status}</Badge>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
+            Amount
+          </Text>
+          <Text color={COLORS.TEXT}>NGN {transaction.amount.toLocaleString()}</Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
+            Quantity
+          </Text>
+          <Text color={COLORS.TEXT}>{transaction.quantity} tickets</Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
+            Tier
+          </Text>
+          <Text color={COLORS.TEXT}>{transaction.tier_name}</Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color={COLORS.TEXT_MUTED} textTransform="uppercase" letterSpacing="0.05em">
+            Table
+          </Text>
+          <Text color={COLORS.TEXT}>Table {transaction.table_number}</Text>
+        </Box>
+      </SimpleGrid>
+    </Box>
   )
 }
