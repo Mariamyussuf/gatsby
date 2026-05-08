@@ -40,18 +40,20 @@ export function QRScanner() {
     setResult(null)
 
     scannerRef.current = new (window as any).Html5Qrcode("qr-reader")
-    scannerRef.current.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decodedText: string) => {
-        stopScanning()
-        processQr(decodedText)
-      },
-      () => {}
-    ).catch(() => {
-      setScanning(false)
-      setResult({ valid: false, message: "Camera access denied. Try manual entry below." })
-    })
+    scannerRef.current
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText: string) => {
+          stopScanning()
+          processQr(decodedText)
+        },
+        () => {}
+      )
+      .catch(() => {
+        setScanning(false)
+        setResult({ valid: false, message: "Camera access denied. Try manual entry below." })
+      })
   }
 
   const stopScanning = () => {
@@ -68,9 +70,10 @@ export function QRScanner() {
       ticketId = parsed.ticket_id || qrData
     } catch {}
 
+    // ✅ Select only scalar columns — no join
     const { data: attendee, error } = await supabase
       .from("attendees")
-      .select("*, ticket_tiers (name)")
+      .select("id, first_name, last_name, table_number, ticket_id, qr_used_at, tier_id")
       .eq("ticket_id", ticketId)
       .maybeSingle()
 
@@ -79,6 +82,15 @@ export function QRScanner() {
       return
     }
 
+    // ✅ Fetch tier name separately as a scalar
+    const { data: tierData } = await supabase
+      .from("ticket_tiers")
+      .select("name")
+      .eq("id", attendee.tier_id)
+      .maybeSingle()
+
+    const tierName = tierData?.name ?? "Unknown"
+
     if (attendee.qr_used_at) {
       setResult({
         valid: false,
@@ -86,7 +98,7 @@ export function QRScanner() {
         attendee: {
           first_name: attendee.first_name,
           last_name: attendee.last_name,
-          tier_name: attendee.ticket_tiers?.name,
+          tier_name: tierName,
           table_number: attendee.table_number,
           ticket_id: attendee.ticket_id,
         },
@@ -94,7 +106,10 @@ export function QRScanner() {
       return
     }
 
-    await supabase.from("attendees").update({ qr_used_at: new Date().toISOString() }).eq("id", attendee.id)
+    await supabase
+      .from("attendees")
+      .update({ qr_used_at: new Date().toISOString() })
+      .eq("id", attendee.id)
 
     setResult({
       valid: true,
@@ -102,7 +117,7 @@ export function QRScanner() {
       attendee: {
         first_name: attendee.first_name,
         last_name: attendee.last_name,
-        tier_name: attendee.ticket_tiers?.name,
+        tier_name: tierName,
         table_number: attendee.table_number,
         ticket_id: attendee.ticket_id,
       },
@@ -176,7 +191,7 @@ export function QRScanner() {
             onClick={stopScanning}
             flex="1"
             style={{
-              background: `${COLORS.CRIMSON}`,
+              background: COLORS.CRIMSON,
               color: "white",
               fontFamily: "'Josefin Sans', sans-serif",
               fontSize: "0.65rem",
@@ -255,7 +270,7 @@ export function QRScanner() {
               borderRadius="full"
               display="flex"
               alignItems="center"
-              justifyContent="center"
+              justifyContent: "center"
               style={{ background: resultColor, margin: "0 auto" }}
             >
               <Text style={{ fontSize: "2rem" }}>{result.valid ? "✓" : "✗"}</Text>
