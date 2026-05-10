@@ -7,7 +7,9 @@ import {
   Text,
   Input,
   Button,
-  Card,
+  CardRoot,
+  CardHeader,
+  CardBody,
   Spinner,
   Badge,
   SimpleGrid,
@@ -67,8 +69,9 @@ export function ManualConfirmation() {
         let table_number: number | undefined
 
         if (txn.tier_id) {
+          // ✅ Correct table name: ticket_tiers (not tiers)
           const { data: tierData } = await supabase
-            .from("tiers")
+            .from("ticket_tiers")
             .select("name")
             .eq("id", txn.tier_id)
             .single()
@@ -216,13 +219,13 @@ export function ManualConfirmation() {
             Manual Booking Recovery
           </Heading>
 
-          <Card.Root style={{ background: color(COLORS.PANEL_MID), border: `1px solid ${color(COLORS.ACCENT)}` }}>
-            <Card.Header style={{ borderBottom: `1px solid ${color(COLORS.ACCENT)}` }}>
+          <CardRoot style={{ background: color(COLORS.PANEL_MID), border: `1px solid ${color(COLORS.ACCENT)}` }}>
+            <CardHeader style={{ borderBottom: `1px solid ${color(COLORS.ACCENT)}` }}>
               <Heading as="h3" size="md" color={color(COLORS.GOLD_BASE)}>
                 Search Transaction
               </Heading>
-            </Card.Header>
-            <Card.Body>
+            </CardHeader>
+            <CardBody>
               <VStack gap={4} align="stretch">
                 <Text color={color(COLORS.TEXT)} fontSize="sm">
                   Enter a transaction reference to search for and manually confirm bookings that failed due to errors.
@@ -294,17 +297,17 @@ export function ManualConfirmation() {
                   </Box>
                 )}
               </VStack>
-            </Card.Body>
-          </Card.Root>
+            </CardBody>
+          </CardRoot>
 
           {pendingTransactions.length > 0 && (
-            <Card.Root style={{ background: color(COLORS.PANEL_MID), border: `1px solid ${color(COLORS.ACCENT)}` }}>
-              <Card.Header style={{ borderBottom: `1px solid ${color(COLORS.ACCENT)}` }}>
+            <CardRoot style={{ background: color(COLORS.PANEL_MID), border: `1px solid ${color(COLORS.ACCENT)}` }}>
+              <CardHeader style={{ borderBottom: `1px solid ${color(COLORS.ACCENT)}` }}>
                 <Heading as="h3" size="md" color={color(COLORS.GOLD_BASE)}>
                   All Pending Transactions
                 </Heading>
-              </Card.Header>
-              <Card.Body>
+              </CardHeader>
+              <CardBody>
                 <SimpleGrid columns={1} gap={3}>
                   {pendingTransactions.map((txn) => (
                     <Box
@@ -332,8 +335,8 @@ export function ManualConfirmation() {
                     </Box>
                   ))}
                 </SimpleGrid>
-              </Card.Body>
-            </Card.Root>
+              </CardBody>
+            </CardRoot>
           )}
         </VStack>
       ) : (
