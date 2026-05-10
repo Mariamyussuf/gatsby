@@ -164,9 +164,9 @@ export function AdminDashboard() {
             </Tabs.Trigger>
           ))}
         </Tabs.List>
-
-        <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
+        
         <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
+        <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>
         <Tabs.Content value="awards"><AwardsNominationsList /></Tabs.Content>
         <Tabs.Content value="recovery"><ManualConfirmation /></Tabs.Content>
