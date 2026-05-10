@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { Box, VStack, HStack, Heading, Text, Button, Badge, SimpleGrid, Input, Select, Spinner } from "@chakra-ui/react"
 import { Box, VStack, HStack, Text, Button, SimpleGrid } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
