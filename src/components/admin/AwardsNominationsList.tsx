@@ -21,13 +21,11 @@ export function AwardsNominationsList() {
 
   const fetchNominations = async () => {
     try {
-      // Fetch categories
       const { data: categories } = await supabase
         .from("award_categories")
         .select("*")
         .order("display_order", { ascending: true })
 
-      // Fetch all nominations
       const { data: allNominations } = await supabase
         .from("award_nominations")
         .select("*")
@@ -50,29 +48,30 @@ export function AwardsNominationsList() {
 
   useEffect(() => {
     fetchNominations()
-    // Poll for new nominations every 5 seconds
     const interval = setInterval(fetchNominations, 5000)
     return () => clearInterval(interval)
   }, [])
 
-  const filteredNominations = selectedCategory
-    ? nominations.find((n) => n.category.id === selectedCategory) || { category: null, nominations: [], count: 0 }
-    : nominations
+  // FIX: Derive allNoms and totalNominations with explicit typed variables
+  // to avoid accidentally passing an object into JSX.
+  const matchedGroup: CategoryNominations | undefined = selectedCategory
+    ? nominations.find((n) => n.category.id === selectedCategory)
+    : undefined
 
-  const allNoms = Array.isArray(filteredNominations)
-    ? filteredNominations.flatMap((n) => n.nominations)
-    : filteredNominations.nominations
+  const allNoms: Nomination[] = selectedCategory
+    ? (matchedGroup?.nominations ?? [])
+    : nominations.flatMap((n) => n.nominations)
 
-  const searchedNoms = allNoms.filter(
+  const totalNominations: number = selectedCategory
+    ? (matchedGroup?.count ?? 0)
+    : nominations.reduce((sum, n) => sum + n.count, 0)
+
+  const searchedNoms: Nomination[] = allNoms.filter(
     (nom) =>
       nom.nominee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       nom.nominator_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       nom.nomination_reason?.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-  const totalNominations = Array.isArray(filteredNominations)
-    ? filteredNominations.reduce((sum, n) => sum + n.count, 0)
-    : filteredNominations.count
 
   if (isLoading) {
     return (
@@ -113,7 +112,8 @@ export function AwardsNominationsList() {
                 color: COLORS.GOLD_BRIGHT,
               }}
             >
-              {totalNominations}
+              {/* FIX: Always coerce to string */}
+              {String(totalNominations)}
             </Text>
           </VStack>
           <Button
@@ -147,7 +147,7 @@ export function AwardsNominationsList() {
         />
       </Box>
 
-      {/* Category Leaderboard */}
+      {/* Category Filters */}
       <Box>
         <Text
           style={{
@@ -194,7 +194,8 @@ export function AwardsNominationsList() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {n.category.name} ({n.count})
+                {/* FIX: Render name and count as explicit strings */}
+                {String(n.category.name)} ({String(n.count)})
               </Button>
             ))}
           </HStack>
@@ -217,9 +218,7 @@ export function AwardsNominationsList() {
       ) : (
         <VStack gap="3" align="stretch">
           {searchedNoms.map((nom) => {
-            const category = nominations
-              .find((n) => n.category.id === nom.award_category_id)
-              ?.category
+            const category = nominations.find((n) => n.category.id === nom.award_category_id)?.category
             return (
               <Box
                 key={nom.id}
@@ -241,7 +240,8 @@ export function AwardsNominationsList() {
                           color: COLORS.GOLD_BRIGHT,
                         }}
                       >
-                        {nom.nominee_name}
+                        {/* FIX: Coerce to string */}
+                        {String(nom.nominee_name ?? "")}
                       </Text>
                       <Badge
                         style={{
@@ -251,7 +251,8 @@ export function AwardsNominationsList() {
                           fontSize: "0.5rem",
                         }}
                       >
-                        {category?.name || "Unknown"}
+                        {/* FIX: Coerce to string */}
+                        {String(category?.name ?? "Unknown")}
                       </Badge>
                     </HStack>
                     <Text
@@ -261,7 +262,7 @@ export function AwardsNominationsList() {
                         color: COLORS.GOLD_DIM,
                       }}
                     >
-                      Nominated by: {nom.nominator_name}
+                      Nominated by: {String(nom.nominator_name ?? "")}
                     </Text>
                   </VStack>
                   <Text
@@ -285,7 +286,7 @@ export function AwardsNominationsList() {
                       marginBottom: "6px",
                     }}
                   >
-                    {nom.nomination_reason}
+                    {String(nom.nomination_reason)}
                   </Text>
                 )}
 
