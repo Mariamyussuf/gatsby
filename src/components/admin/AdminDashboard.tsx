@@ -3,7 +3,6 @@ import { Box, Text, VStack, HStack, Tabs, SimpleGrid, Badge, Button } from "@cha
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import { TableMap } from "./TableMap"
-import { TableLockManager } from "./TableLockManager"
 import { AttendeeList } from "./AttendeeList"
 import { TransactionsList } from "./TransactionsList"
 import { AwardsNominationsList } from "./AwardsNominationsList"
@@ -158,7 +157,6 @@ export function AdminDashboard() {
         >
           {[
             { value: "overview", label: "Table Map" },
-            { value: "locks", label: "Table Locks" },
             { value: "transactions", label: "Transactions" },
             { value: "attendees", label: "Attendees" },
             { value: "awards", label: "Awards" },
@@ -183,9 +181,6 @@ export function AdminDashboard() {
 
         <Tabs.Content value="overview">
           <TableMap />
-        </Tabs.Content>
-        <Tabs.Content value="locks">
-          <TableLockManager />
         </Tabs.Content>
         <Tabs.Content value="transactions">
           <TransactionsList />
