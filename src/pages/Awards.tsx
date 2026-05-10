@@ -41,6 +41,7 @@ const AWARD_GROUPS = [
     awards: [
       "Freshest Fresher of the Year",
       "Rookie of the Year",
+      "Next Rated",
       "Most Fashionable (Female)",
       "Most Fashionable (Male)",
       "Most Influential (Female)",
@@ -52,12 +53,6 @@ const AWARD_GROUPS = [
       "Most Sociable (Female)",
       "Clique of the Year",
     ],
-  },
-  {
-    type: "next_rated",
-    name: "Next Rated",
-    badge: "Next Rated",
-    awards: ["Next Rated"],
   },
   {
     type: "entertainment",
