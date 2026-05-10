@@ -24,7 +24,6 @@ type TransactionRow = {
   payment_status: string
   created_at: string
   confirmed_at: string | null
-  tier_name: string | null
   group_booking_code: string
 }
 
@@ -227,7 +226,7 @@ export function TransactionsList() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["Group Code", "Reference", "Name", "Email", "Tier", "Qty", "Amount", "Status", "Confirmed"].map((h) => (
+              {["Group Code", "Reference", "Name", "Email", "Qty", "Amount", "Status", "Confirmed"].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
@@ -235,13 +234,13 @@ export function TransactionsList() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>
+                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>
                   Loading...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>
+                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>
                   No transactions found
                 </td>
               </tr>
