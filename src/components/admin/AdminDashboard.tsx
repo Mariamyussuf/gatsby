@@ -137,10 +137,10 @@ export function AdminDashboard() {
           {[
             { value: "overview",      label: "Table Map" },
             { value: "locks",         label: "Table Locks" },
-            { value: "transactions",  label: "Transactions" },
+           // { value: "transactions",  label: "Transactions" },
             { value: "attendees",     label: "Attendees" },
             { value: "awards",        label: "Awards" },
-            // { value: "recovery",      label: "Recovery" },
+             { value: "recovery",      label: "Recovery" },
             { value: "waitlist",      label: "Waitlist" },
             { value: "scanner",       label: "QR Scanner" },
             { value: "vvip",          label: "VVIP Pickups" },
@@ -153,7 +153,7 @@ export function AdminDashboard() {
 
         <Tabs.Content value="overview"><TableMap /></Tabs.Content>
         <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
-        <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
+        {/* <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content> */}
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>
         <Tabs.Content value="awards"><AwardsNominationsList /></Tabs.Content>
         <Tabs.Content value="recovery"><ManualConfirmation /></Tabs.Content> 
