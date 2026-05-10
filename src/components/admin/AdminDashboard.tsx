@@ -152,7 +152,7 @@ export function AdminDashboard() {
       </SimpleGrid>
 
       {/* Tabs */}
-      <Tabs.Root defaultValue="locks">
+      <Tabs.Root defaultValue="transactions">
         <Tabs.List style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, marginBottom: "24px", overflowX: "auto" }}>
           {TABS.map(({ value, label }) => (
             <Tabs.Trigger
