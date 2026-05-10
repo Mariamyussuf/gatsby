@@ -21,6 +21,7 @@ export function TableLockManager() {
   const [selectedTier, setSelectedTier] = useState("")
   const [tiers, setTiers] = useState<{ id: string; name: string }[]>([])
   const [searchTable, setSearchTable] = useState("")
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   useEffect(() => {
     loadTiers()
@@ -41,22 +42,24 @@ export function TableLockManager() {
     const { data, error } = await supabase
       .from("gala_tables")
       .select(`
-        id, tier_id, table_number, seats_total, seats_booked,
+        id, tier_id, table_number, seats_total, seats_booked, is_locked,
         ticket_tiers (name)
       `)
       .order("table_number")
 
     if (!error && data) {
-      const formatted = data.map((t: any) => ({
+      const formatted: GalaTable[] = data.map((t: any) => ({
         id: t.id,
         tier_id: t.tier_id,
         table_number: t.table_number,
         seats_total: t.seats_total,
         seats_booked: t.seats_booked,
-        is_locked: false,
-        tier_name: t.ticket_tiers?.name || "Unknown",
+        is_locked: t.is_locked ?? false,
+        tier_name: t.ticket_tiers?.name ?? "Unknown",
       }))
       setTables(formatted)
+    } else if (error) {
+      toaster.create({ title: "Failed to load tables", type: "error" })
     }
     setIsLoading(false)
   }
@@ -75,21 +78,27 @@ export function TableLockManager() {
   }
 
   const toggleLock = async (table: GalaTable) => {
+    setTogglingId(table.id)
+    const newLocked = !table.is_locked
     const { error } = await supabase
       .from("gala_tables")
-      .update({ is_locked: !table.is_locked })
+      .update({ is_locked: newLocked })
       .eq("id", table.id)
 
     if (!error) {
+      // Optimistically update local state instead of re-fetching everything
+      setTables((prev) =>
+        prev.map((t) => (t.id === table.id ? { ...t, is_locked: newLocked } : t))
+      )
       toaster.create({
-        title: table.is_locked ? "Table unlocked" : "Table locked",
-        description: `Table ${table.table_number} is now ${table.is_locked ? "available" : "unavailable"}`,
+        title: newLocked ? "Table locked" : "Table unlocked",
+        description: `Table ${table.table_number} is now ${newLocked ? "unavailable" : "available"}`,
         type: "success",
       })
-      loadTables()
     } else {
       toaster.create({ title: "Error updating table", type: "error" })
     }
+    setTogglingId(null)
   }
 
   if (isLoading) {
@@ -163,6 +172,7 @@ export function TableLockManager() {
             <Button
               w="100%"
               onClick={() => toggleLock(table)}
+              isLoading={togglingId === table.id}
               colorScheme={table.is_locked ? "green" : "red"}
               size="sm"
             >
