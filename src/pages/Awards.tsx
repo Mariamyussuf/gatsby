@@ -34,76 +34,82 @@ interface Nomination {
 
 const MATRIC_REGEX = /^\d{4}\/\d{4,5}$/
 
-// Static award definitions — used for landing display + form structure
 const AWARD_GROUPS = [
   {
     type: "social",
     name: "Social Awards",
     awards: [
-      "Most Influential Male",
-      "Most Influential Female",
-      "Most Popular Male",
-      "Most Popular Female",
-      "Most Fashionable Male",
-      "Most Fashionable Female",
+      "Freshest Fresher of the Year",
+      "Rookie of the Year",
+      "Most Fashionable (Female)",
+      "Most Fashionable (Male)",
+      "Most Influential (Female)",
+      "Most Influential (Male)",
+      "Most Popular (Male)",
+      "Most Popular (Female)",
+      "Spotlight Award",
+      "Most Sociable (Male)",
+      "Most Sociable (Female)",
+      "Clique of the Year",
     ],
   },
   {
-    type: "creative",
-    name: "Creative Awards",
+    type: "next_rated",
+    name: "Next Rated",
+    badge: "Next Rated",
+    awards: ["Next Rated"],
+  },
+  {
+    type: "entertainment",
+    name: "Entertainment Awards",
     awards: [
-      "Photographer of the Year",
-      "Graphics Designer of the Year",
-      "Video Editor of the Year",
+      "Talent of the Year",
+      "Content of the Year",
+      "Artiste of the Year",
+      "DJ / Music Producer of the Year",
+      "Icon 360",
     ],
   },
   {
     type: "sports",
     name: "Sports Awards",
     awards: [
-      "Male Footballer of the Year",
-      "Female Footballer of the Year",
-      "Male Basketballer of the Year",
-      "Female Basketballer of the Year",
+      "Sport Personality (Male)",
+      "Sport Personality (Female)",
+      "Football (Male)",
+      "Football (Female)",
+      "Basketball (Female)",
+      "Basketball (Male)",
     ],
   },
   {
-    type: "entertainment",
-    name: "Entertainment Awards",
+    type: "creative",
+    name: "Creative Awards",
     awards: [
-      "Artiste of the Year",
-      "Dancer of the Year",
-      "Male & Female Model of the Year",
-      "Content Creator of the Year",
-      "Music Producer of the Year",
-      "DJ of the Year",
+      "Graphic Designer of the Year",
+      "Videographer of the Year",
+      "Photographer of the Year",
     ],
   },
   {
     type: "innovation",
     name: "Innovation Awards",
     awards: [
-      "Entrepreneur of the Year",
-      "Innovation of the Year",
       "Brand of the Year",
-      "Academic Excellence Award",
+      "Innovation of the Year",
+      "Entrepreneur of the Year",
     ],
   },
   {
-    type: "management",
-    name: "Management Awards",
+    type: "leadership",
+    name: "Leadership Awards",
     awards: [
-      "Best Lecturer of the Year",
-      "Staff Advisors Award",
-      "Most Distinguished Executive (Male)",
-      "Most Distinguished Executive (Female)",
+      "Academic Excellence Award",
+      "Student of the Year",
+      "Distinguished Executive (Female)",
+      "Distinguished Executive (Male)",
+      "Lecturer of the Year",
     ],
-  },
-  {
-    type: "next_rated",
-    name: "Next Rated Award",
-    badge: "Next Rated",
-    awards: ["Next Rated"],
   },
 ]
 
@@ -139,7 +145,6 @@ function FormField({
   )
 }
 
-// Cinematic landing screen shown before form starts
 function LandingScreen({ onBegin }: { onBegin: () => void }) {
   const [visible, setVisible] = useState(false)
   useEffect(() => { setTimeout(() => setVisible(true), 100) }, [])
@@ -157,7 +162,6 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
       px={4}
       py={10}
     >
-      {/* Ambient glow */}
       <Box
         position="absolute"
         top="50%"
@@ -211,7 +215,6 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           it's time to put their names forward.
         </Text>
 
-        {/* Award categories preview */}
         <VStack gap={1} width="100%">
           {AWARD_GROUPS.map((group, i) => (
             <Box
@@ -306,7 +309,6 @@ export default function AwardsPage() {
         categoryId: "",
         categoryName: award,
         nomineeName: "",
-        badge: group.badge,
       }))
     })
     return init
@@ -353,7 +355,6 @@ export default function AwardsPage() {
   const handleNext = async () => {
     if (currentStep === 0) {
       if (!validateNominatorStep()) return
-      // Check for duplicate matric before proceeding
       setIsCheckingMatric(true)
       try {
         const { data, error } = await supabase
@@ -433,10 +434,8 @@ export default function AwardsPage() {
     }
   }
 
-  // ── LANDING ───────────────────────────────────────────────────────────────────
   if (!hasBegun) return <LandingScreen onBegin={() => setHasBegun(true)} />
 
-  // ── ALREADY VOTED ─────────────────────────────────────────────────────────────
   if (alreadyVoted) {
     return (
       <Box
@@ -516,7 +515,6 @@ export default function AwardsPage() {
     )
   }
 
-  // ── SUCCESS ───────────────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <Box
@@ -602,7 +600,6 @@ export default function AwardsPage() {
       ? AWARD_GROUPS[currentStep - 1].name
       : "Review & Submit"
 
-  // ── FORM ──────────────────────────────────────────────────────────────────────
   return (
     <Box minH="100vh" bg={COLORS.BG} pt={10} pb={4} display="flex" flexDirection="column">
       <Container maxW="680px" flex={1}>
@@ -658,7 +655,6 @@ export default function AwardsPage() {
           position="relative"
           bg={`${COLORS.PANEL}08`}
         >
-          {/* Corner accents */}
           <Box position="absolute" top="-1px" left="-1px" w="16px" h="16px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
           <Box position="absolute" top="-1px" right="-1px" w="16px" h="16px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
           <Box position="absolute" bottom="-1px" left="-1px" w="16px" h="16px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
@@ -816,24 +812,9 @@ export default function AwardsPage() {
               {/* All nominations */}
               {AWARD_GROUPS.map((group) => (
                 <Box key={group.type} borderLeft={`1px solid ${COLORS.GOLD_DIM}30`} pl={4} py={1}>
-                  <HStack gap={3} mb={3} align="center">
-                    <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="2px" textTransform="uppercase">
-                      {group.name}
-                    </Text>
-                    {group.badge && (
-                      <Text
-                        color={COLORS.GOLD_DIM}
-                        fontSize="8px"
-                        letterSpacing="1px"
-                        textTransform="uppercase"
-                        border={`1px solid ${COLORS.GOLD_DIM}30`}
-                        px={1.5}
-                        borderRadius="2px"
-                      >
-                        {group.badge}
-                      </Text>
-                    )}
-                  </HStack>
+                  <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="2px" textTransform="uppercase" mb={3}>
+                    {group.name}
+                  </Text>
                   <VStack gap={2} align="stretch">
                     {(nominations[group.type] || []).map((nom, i) => (
                       <HStack key={i} justify="space-between" align="start">
@@ -902,7 +883,6 @@ export default function AwardsPage() {
         </HStack>
       </Container>
 
-      {/* Footer */}
       <Box borderTop={`1px solid ${COLORS.GOLD_DIM}20`} py={5} textAlign="center">
         <Text color={`${COLORS.GOLD_GLOW}50`} fontSize="8px" letterSpacing="5px" textTransform="uppercase">
           BUILT TO COOK
