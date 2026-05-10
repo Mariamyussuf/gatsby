@@ -91,7 +91,7 @@ export function TransactionsList() {
         "Email": t.primary_email,
         "Tier": t.tier_name ?? "—",
         "Quantity": t.quantity,
-        "Total": `₦${(t.total_kobo / 100).toLocaleString()}`,
+        "Total": `NGN ${(t.total_kobo / 100).toLocaleString()}`,
         "Status": t.payment_status,
         "Booked At": new Date(t.created_at).toLocaleString(),
         "Confirmed At": t.confirmed_at ? new Date(t.confirmed_at).toLocaleString() : "—",
@@ -267,7 +267,7 @@ export function TransactionsList() {
                   <td style={tdStyle}>{t.primary_email}</td>
                   <td style={tdStyle}>{t.tier_name ?? "—"}</td>
                   <td style={tdStyle}>{t.quantity}</td>
-                  <td style={tdStyle}>₦{(t.total_kobo / 100).toLocaleString()}</td>
+                  <td style={tdStyle}>NGN {(t.total_kobo / 100).toLocaleString()}</td>
                   <td style={tdStyle}>
                     <Badge
                       style={{
