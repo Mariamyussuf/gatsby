@@ -160,7 +160,7 @@ export function TableLockManager() {
             key={table.id}
             p={4}
             bg={COLORS.PANEL_MID}
-            borderColor={COLORS.ACCENT}
+            borderColor={COLORS.GOLD_DIM}
             borderWidth={1}
             borderRadius="md"
           >
@@ -172,11 +172,10 @@ export function TableLockManager() {
                 {table.is_locked ? "LOCKED" : "AVAILABLE"}
               </Badge>
             </HStack>
-            {/* FIX: Always render strings, never raw objects */}
             <Text color={COLORS.TEXT} fontSize="sm" mb={2}>
               {String(table.tier_name ?? "Unknown")}
             </Text>
-            <Text color={COLORS.TEXT_MUTED} fontSize="xs" mb={4}>
+            <Text color={COLORS.GOLD_DIM} fontSize="xs" mb={4}>
               Seats: {table.seats_booked}/{table.seats_total}
             </Text>
             <Button
@@ -193,7 +192,7 @@ export function TableLockManager() {
       </SimpleGrid>
 
       {filteredTables.length === 0 && (
-        <Text color={COLORS.TEXT_MUTED} textAlign="center" py={8}>
+        <Text color={COLORS.GOLD_DIM} textAlign="center" py={8}>
           No tables found
         </Text>
       )}
