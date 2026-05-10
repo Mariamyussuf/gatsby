@@ -22,15 +22,14 @@ export function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({ totalSold: 0, totalRevenue: 0, byTier: [] })
 
   const fetchStats = async () => {
-    // ✅ Don't join ticket_tiers — just count rows for totalSold
     const { data: attendees } = await supabase
       .from("attendees")
       .select("id")
 
-    // ✅ Join tier_name directly from transactions (no nested relation needed)
+    // Join ticket_tiers to get tier name, since tier_name is not a column on transactions
     const { data: txns } = await supabase
       .from("transactions")
-      .select("total_kobo, quantity, tier_name")
+      .select("total_kobo, quantity, ticket_tiers (name)")
       .eq("payment_status", "confirmed")
 
     if (attendees && txns) {
@@ -39,8 +38,7 @@ export function AdminDashboard() {
 
       const tierMap: Record<string, { count: number; revenue: number; name: string }> = {}
       for (const t of txns) {
-        // ✅ Use tier_name (scalar string) directly from transactions table
-        const tName = (t.tier_name as string) || "Unknown"
+        const tName = (t.ticket_tiers as { name: string } | null)?.name ?? "Unknown"
         if (!tierMap[tName]) tierMap[tName] = { count: 0, revenue: 0, name: tName }
         tierMap[tName].count += t.quantity ?? 0
         tierMap[tName].revenue += (t.total_kobo ?? 0) / 100
@@ -135,17 +133,22 @@ export function AdminDashboard() {
       <Tabs.Root defaultValue="overview">
         <Tabs.List style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, marginBottom: "24px" }}>
           {[
-            { value: "overview",      label: "Table Map" },
-            { value: "locks",         label: "Table Locks" },
-           // { value: "transactions",  label: "Transactions" },
-            { value: "attendees",     label: "Attendees" },
-            { value: "awards",        label: "Awards" },
-             { value: "recovery",      label: "Recovery" },
-            { value: "waitlist",      label: "Waitlist" },
-            { value: "scanner",       label: "QR Scanner" },
-            { value: "vvip",          label: "VVIP Pickups" },
+            { value: "overview",     label: "Table Map" },
+            { value: "locks",        label: "Table Locks" },
+            { value: "transactions", label: "Transactions" },
+            { value: "attendees",    label: "Attendees" },
+            { value: "awards",       label: "Awards" },
+            { value: "recovery",     label: "Recovery" },
+            { value: "waitlist",     label: "Waitlist" },
+            { value: "scanner",      label: "QR Scanner" },
+            { value: "vvip",         label: "VVIP Pickups" },
           ].map(({ value, label }) => (
-            <Tabs.Trigger key={value} value={value} style={tabStyle} _selected={{ color: COLORS.GOLD_BRIGHT, borderBottom: `2px solid ${COLORS.GOLD_BASE}` }}>
+            <Tabs.Trigger
+              key={value}
+              value={value}
+              style={tabStyle}
+              _selected={{ color: COLORS.GOLD_BRIGHT, borderBottom: `2px solid ${COLORS.GOLD_BASE}` }}
+            >
               {label}
             </Tabs.Trigger>
           ))}
@@ -153,10 +156,10 @@ export function AdminDashboard() {
 
         <Tabs.Content value="overview"><TableMap /></Tabs.Content>
         <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
-        <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content> 
+        <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>
         <Tabs.Content value="awards"><AwardsNominationsList /></Tabs.Content>
-        <Tabs.Content value="recovery"><ManualConfirmation /></Tabs.Content> 
+        <Tabs.Content value="recovery"><ManualConfirmation /></Tabs.Content>
         <Tabs.Content value="waitlist"><WaitlistAdmin /></Tabs.Content>
         <Tabs.Content value="scanner"><QRScanner /></Tabs.Content>
         <Tabs.Content value="vvip"><VVIPPickupManager /></Tabs.Content>
