@@ -49,8 +49,7 @@ export function TransactionsList() {
         payment_status,
         created_at,
         confirmed_at,
-        group_booking_code,
-        tier_name
+        group_booking_code
       `)
       .order("created_at", { ascending: false })
 
@@ -89,7 +88,6 @@ export function TransactionsList() {
         "Squad Reference": t.squad_reference || "—",
         "Primary Name": `${t.primary_first_name} ${t.primary_last_name}`,
         "Email": t.primary_email,
-        "Tier": t.tier_name ?? "—",
         "Quantity": t.quantity,
         "Total": `NGN ${(t.total_kobo / 100).toLocaleString()}`,
         "Status": t.payment_status,
@@ -265,7 +263,6 @@ export function TransactionsList() {
                     {t.primary_first_name} {t.primary_last_name}
                   </td>
                   <td style={tdStyle}>{t.primary_email}</td>
-                  <td style={tdStyle}>{t.tier_name ?? "—"}</td>
                   <td style={tdStyle}>{t.quantity}</td>
                   <td style={tdStyle}>NGN {(t.total_kobo / 100).toLocaleString()}</td>
                   <td style={tdStyle}>

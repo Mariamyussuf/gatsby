@@ -41,7 +41,7 @@ export function TableLockManager() {
     const { data, error } = await supabase
       .from("gala_tables")
       .select(`
-        id, tier_id, table_number, seats_total, seats_booked, is_locked,
+        id, tier_id, table_number, seats_total, seats_booked,
         ticket_tiers (name)
       `)
       .order("table_number")
@@ -53,7 +53,7 @@ export function TableLockManager() {
         table_number: t.table_number,
         seats_total: t.seats_total,
         seats_booked: t.seats_booked,
-        is_locked: t.is_locked,
+        is_locked: false,
         tier_name: t.ticket_tiers?.name || "Unknown",
       }))
       setTables(formatted)
