@@ -42,12 +42,6 @@ const str = (val: unknown): string => {
   return String(val)
 }
 
-const color = (val: unknown): string => {
-  if (typeof val === "string") return val
-  console.warn("COLORS value is not a string:", val)
-  return "inherit"
-}
-
 export function ManualConfirmation() {
   const [reference, setReference] = useState("")
   const [transaction, setTransaction] = useState<PendingTransaction | null>(null)
@@ -69,7 +63,6 @@ export function ManualConfirmation() {
         let table_number: number | undefined
 
         if (txn.tier_id) {
-          // ✅ Correct table name: ticket_tiers (not tiers)
           const { data: tierData } = await supabase
             .from("ticket_tiers")
             .select("name")
@@ -215,19 +208,20 @@ export function ManualConfirmation() {
 
       {activeTab === "confirm" ? (
         <VStack gap={6} align="stretch">
-          <Heading as="h2" size="lg" color={color(COLORS.GOLD_BASE)}>
+          <Heading as="h2" size="lg" color={COLORS.GOLD_BASE}>
             Manual Booking Recovery
           </Heading>
 
-          <CardRoot style={{ background: color(COLORS.PANEL_MID), border: `1px solid ${color(COLORS.ACCENT)}` }}>
-            <CardHeader style={{ borderBottom: `1px solid ${color(COLORS.ACCENT)}` }}>
-              <Heading as="h3" size="md" color={color(COLORS.GOLD_BASE)}>
+          {/* FIX: replaced COLORS.PANEL_MID (valid) and COLORS.GOLD_DIM (valid) */}
+          <CardRoot style={{ background: COLORS.PANEL_MID, border: `1px solid ${COLORS.GOLD_DIM}` }}>
+            <CardHeader style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}` }}>
+              <Heading as="h3" size="md" color={COLORS.GOLD_BASE}>
                 Search Transaction
               </Heading>
             </CardHeader>
             <CardBody>
               <VStack gap={4} align="stretch">
-                <Text color={color(COLORS.TEXT)} fontSize="sm">
+                <Text color={COLORS.TEXT} fontSize="sm">
                   Enter a transaction reference to search for and manually confirm bookings that failed due to errors.
                 </Text>
                 <HStack w="100%">
@@ -237,9 +231,9 @@ export function ManualConfirmation() {
                     onChange={(e) => setReference(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && searchTransaction()}
                     style={{
-                      background: color(COLORS.INPUT_BG),
-                      color: color(COLORS.TEXT),
-                      borderColor: color(COLORS.ACCENT),
+                      background: COLORS.PANEL_MID,   // was COLORS.INPUT_BG (undefined)
+                      color: COLORS.TEXT,
+                      borderColor: COLORS.GOLD_DIM,   // was COLORS.ACCENT (undefined)
                     }}
                   />
                   <Button onClick={searchTransaction} loading={isLoading} colorPalette="orange" minW="120px">
@@ -247,7 +241,7 @@ export function ManualConfirmation() {
                   </Button>
                 </HStack>
 
-                {isLoading && <Spinner color={color(COLORS.GOLD_BASE)} />}
+                {isLoading && <Spinner color={COLORS.GOLD_BASE} />}
 
                 {!isLoading && !transaction && reference.trim() && (
                   <Text color="red.500" fontSize="sm">Transaction not found</Text>
@@ -258,35 +252,35 @@ export function ManualConfirmation() {
                     w="100%"
                     p={4}
                     style={{
-                      background: color(COLORS.BG),
+                      background: COLORS.BG,
                       borderRadius: "4px",
-                      border: `1px solid ${color(COLORS.ACCENT)}`,
+                      border: `1px solid ${COLORS.GOLD_DIM}`,  // was COLORS.ACCENT (undefined)
                     }}
                   >
                     <SimpleGrid columns={2} gap={3} mb={4}>
                       <Box>
-                        <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">Reference</Text>
-                        <Text color={color(COLORS.GOLD_BASE)} fontWeight="600">{str(transaction.reference)}</Text>
+                        <Text fontSize="xs" color={COLORS.GOLD_DIM} textTransform="uppercase">Reference</Text>
+                        <Text color={COLORS.GOLD_BASE} fontWeight="600">{str(transaction.reference)}</Text>
                       </Box>
                       <Box>
-                        <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">Status</Text>
+                        <Text fontSize="xs" color={COLORS.GOLD_DIM} textTransform="uppercase">Status</Text>
                         <Badge colorPalette="orange">{str(transaction.payment_status)}</Badge>
                       </Box>
                       <Box>
-                        <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">Amount</Text>
-                        <Text color={color(COLORS.TEXT)}>NGN {(transaction.total_kobo / 100).toLocaleString()}</Text>
+                        <Text fontSize="xs" color={COLORS.GOLD_DIM} textTransform="uppercase">Amount</Text>
+                        <Text color={COLORS.TEXT}>NGN {(transaction.total_kobo / 100).toLocaleString()}</Text>
                       </Box>
                       <Box>
-                        <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">Quantity</Text>
-                        <Text color={color(COLORS.TEXT)}>{Number(transaction.quantity)} tickets</Text>
+                        <Text fontSize="xs" color={COLORS.GOLD_DIM} textTransform="uppercase">Quantity</Text>
+                        <Text color={COLORS.TEXT}>{Number(transaction.quantity)} tickets</Text>
                       </Box>
                       <Box>
-                        <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">Tier</Text>
-                        <Text color={color(COLORS.TEXT)}>{transaction.tier_name ? str(transaction.tier_name) : "—"}</Text>
+                        <Text fontSize="xs" color={COLORS.GOLD_DIM} textTransform="uppercase">Tier</Text>
+                        <Text color={COLORS.TEXT}>{transaction.tier_name ? str(transaction.tier_name) : "—"}</Text>
                       </Box>
                       <Box>
-                        <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">Table</Text>
-                        <Text color={color(COLORS.TEXT)}>
+                        <Text fontSize="xs" color={COLORS.GOLD_DIM} textTransform="uppercase">Table</Text>
+                        <Text color={COLORS.TEXT}>
                           {transaction.table_number != null ? `Table ${transaction.table_number}` : "—"}
                         </Text>
                       </Box>
@@ -301,9 +295,9 @@ export function ManualConfirmation() {
           </CardRoot>
 
           {pendingTransactions.length > 0 && (
-            <CardRoot style={{ background: color(COLORS.PANEL_MID), border: `1px solid ${color(COLORS.ACCENT)}` }}>
-              <CardHeader style={{ borderBottom: `1px solid ${color(COLORS.ACCENT)}` }}>
-                <Heading as="h3" size="md" color={color(COLORS.GOLD_BASE)}>
+            <CardRoot style={{ background: COLORS.PANEL_MID, border: `1px solid ${COLORS.GOLD_DIM}` }}>
+              <CardHeader style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}` }}>
+                <Heading as="h3" size="md" color={COLORS.GOLD_BASE}>
                   All Pending Transactions
                 </Heading>
               </CardHeader>
@@ -314,20 +308,20 @@ export function ManualConfirmation() {
                       key={txn.id}
                       p={3}
                       style={{
-                        background: color(COLORS.BG),
+                        background: COLORS.BG,
                         borderRadius: "4px",
-                        border: `1px solid ${color(COLORS.ACCENT)}`,
+                        border: `1px solid ${COLORS.GOLD_DIM}`,  // was COLORS.ACCENT (undefined)
                         cursor: "pointer",
                       }}
                       onClick={() => { setReference(txn.reference); setTransaction(null) }}
                     >
                       <HStack justify="space-between" mb={2}>
-                        <Text color={color(COLORS.GOLD_BASE)} fontWeight="600" fontSize="sm">
+                        <Text color={COLORS.GOLD_BASE} fontWeight="600" fontSize="sm">
                           {str(txn.reference)}
                         </Text>
                         <Badge colorPalette="orange">{str(txn.payment_status)}</Badge>
                       </HStack>
-                      <Text color={color(COLORS.TEXT)} fontSize="xs">
+                      <Text color={COLORS.TEXT} fontSize="xs">
                         {txn.tier_name ? str(txn.tier_name) : "—"} •{" "}
                         {Number(txn.quantity)} ticket(s) •{" "}
                         {txn.table_number != null ? `Table ${txn.table_number}` : "No table"}
