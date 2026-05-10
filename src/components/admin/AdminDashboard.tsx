@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import { Box, Text, VStack, HStack, Tabs, SimpleGrid, Button } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
-import { TableMap } from "./TableMap"
 import { AttendeeList } from "./AttendeeList"
 import { TransactionsList } from "./TransactionsList"
 import { AwardsNominationsList } from "./AwardsNominationsList"
@@ -18,6 +17,55 @@ type Stats = {
   byTier: { name: string; count: number; revenue: number }[]
 }
 
+// Defined OUTSIDE the component so React sees a stable reference
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <Box
+      p="6"
+      style={{
+        border: `1px solid ${COLORS.GOLD_DIM}40`,
+        background: `linear-gradient(180deg, ${COLORS.PANEL_MID}60 0%, ${COLORS.BG} 100%)`,
+      }}
+    >
+      <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.55rem", letterSpacing: "0.25em", color: COLORS.GOLD_DIM, textTransform: "uppercase", marginBottom: "8px" }}>
+        {label}
+      </Text>
+      <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "2rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>
+        {value}
+      </Text>
+      {sub && (
+        <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: COLORS.GOLD_DIM, marginTop: "4px" }}>
+          {sub}
+        </Text>
+      )}
+    </Box>
+  )
+}
+
+const TAB_TRIGGER_STYLE: React.CSSProperties = {
+  fontFamily: "'Josefin Sans', sans-serif",
+  fontSize: "0.6rem",
+  letterSpacing: "0.2em",
+  textTransform: "uppercase",
+  color: COLORS.GOLD_DIM,
+  cursor: "pointer",
+  padding: "10px 16px",
+  background: "transparent",
+  border: "none",
+  borderBottom: "2px solid transparent",
+}
+
+const TABS = [
+  { value: "locks",        label: "Table Locks" },
+  { value: "transactions", label: "Transactions" },
+  { value: "attendees",    label: "Attendees" },
+  { value: "awards",       label: "Awards" },
+  { value: "recovery",     label: "Recovery" },
+  { value: "waitlist",     label: "Waitlist" },
+  { value: "scanner",      label: "QR Scanner" },
+  { value: "vvip",         label: "VVIP Pickups" },
+]
+
 export function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({ totalSold: 0, totalRevenue: 0, byTier: [] })
 
@@ -26,7 +74,6 @@ export function AdminDashboard() {
       .from("attendees")
       .select("id")
 
-    // Join ticket_tiers to get tier name, since tier_name is not a column on transactions
     const { data: txns } = await supabase
       .from("transactions")
       .select("total_kobo, quantity, ticket_tiers (name)")
@@ -53,38 +100,6 @@ export function AdminDashboard() {
     const interval = setInterval(fetchStats, 30000)
     return () => clearInterval(interval)
   }, [])
-
-  const StatCard = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
-    <Box
-      p="6"
-      style={{
-        border: `1px solid ${COLORS.GOLD_DIM}40`,
-        background: `linear-gradient(180deg, ${COLORS.PANEL_MID}60 0%, ${COLORS.BG} 100%)`,
-      }}
-    >
-      <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.55rem", letterSpacing: "0.25em", color: COLORS.GOLD_DIM, textTransform: "uppercase", marginBottom: "8px" }}>
-        {label}
-      </Text>
-      <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "2rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>
-        {value}
-      </Text>
-      {sub && (
-        <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: COLORS.GOLD_DIM, marginTop: "4px" }}>
-          {sub}
-        </Text>
-      )}
-    </Box>
-  )
-
-  const tabStyle = {
-    fontFamily: "'Josefin Sans', sans-serif",
-    fontSize: "0.6rem",
-    letterSpacing: "0.2em",
-    textTransform: "uppercase" as const,
-    color: COLORS.GOLD_DIM,
-    cursor: "pointer",
-    padding: "10px 16px",
-  }
 
   return (
     <Box minH="100vh" style={{ backgroundColor: COLORS.BG }} px={{ base: "4", md: "8" }} py="8">
@@ -129,32 +144,20 @@ export function AdminDashboard() {
         ))}
       </SimpleGrid>
 
-      {/* Tabs */}
-      <Tabs.Root defaultValue="overview">
-        <Tabs.List style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, marginBottom: "24px" }}>
-          {[
-            { value: "overview",     label: "Table Map" },
-            { value: "locks",        label: "Table Locks" },
-            { value: "transactions", label: "Transactions" },
-            { value: "attendees",    label: "Attendees" },
-            { value: "awards",       label: "Awards" },
-            { value: "recovery",     label: "Recovery" },
-            { value: "waitlist",     label: "Waitlist" },
-            { value: "scanner",      label: "QR Scanner" },
-            { value: "vvip",         label: "VVIP Pickups" },
-          ].map(({ value, label }) => (
+      {/* Tabs — defaultValue matches first actual Tabs.Content */}
+      <Tabs.Root defaultValue="locks">
+        <Tabs.List style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, marginBottom: "24px", overflowX: "auto" }}>
+          {TABS.map(({ value, label }) => (
             <Tabs.Trigger
               key={value}
               value={value}
-              style={tabStyle}
-              _selected={{ color: COLORS.GOLD_BRIGHT, borderBottom: `2px solid ${COLORS.GOLD_BASE}` }}
+              style={TAB_TRIGGER_STYLE}
             >
               {label}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
 
-        {/* <Tabs.Content value="overview"><TableMap /></Tabs.Content> */}
         <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
         <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>
