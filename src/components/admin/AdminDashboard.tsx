@@ -3,6 +3,7 @@ import { Box, Text, VStack, HStack, Tabs, SimpleGrid, Badge, Button } from "@cha
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import { TableMap } from "./TableMap"
+import { TableLockManager } from "./TableLockManager"
 import { AttendeeList } from "./AttendeeList"
 import { TransactionsList } from "./TransactionsList"
 import { AwardsNominationsList } from "./AwardsNominationsList"
@@ -136,13 +137,13 @@ export function AdminDashboard() {
       {/* Stats overview */}
       <SimpleGrid columns={{ base: 2, md: 4 }} gap="4" mb="10">
         <StatCard label="Tickets Sold" value={String(stats.totalSold)} />
-        <StatCard label="Total Revenue" value={`₦${stats.totalRevenue.toLocaleString()}`} />
+        <StatCard label="Total Revenue" value={`NGN ${stats.totalRevenue.toLocaleString()}`} />
         {stats.byTier.map((t) => (
           <StatCard
             key={t.name}
             label={`${t.name} Tickets`}
             value={String(t.count)}
-            sub={`₦${t.revenue.toLocaleString()}`}
+            sub={`NGN ${t.revenue.toLocaleString()}`}
           />
         ))}
       </SimpleGrid>
@@ -157,6 +158,7 @@ export function AdminDashboard() {
         >
           {[
             { value: "overview", label: "Table Map" },
+            { value: "locks", label: "Table Locks" },
             { value: "transactions", label: "Transactions" },
             { value: "attendees", label: "Attendees" },
             { value: "awards", label: "Awards" },
@@ -181,6 +183,9 @@ export function AdminDashboard() {
 
         <Tabs.Content value="overview">
           <TableMap />
+        </Tabs.Content>
+        <Tabs.Content value="locks">
+          <TableLockManager />
         </Tabs.Content>
         <Tabs.Content value="transactions">
           <TransactionsList />
