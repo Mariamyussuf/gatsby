@@ -133,17 +133,17 @@ export function TableLockManager() {
           placeholder="Search table number..."
           value={searchTable}
           onChange={(e) => setSearchTable(e.target.value)}
-          bg={COLORS.INPUT_BG}
+          bg={COLORS.PANEL_MID}
           color={COLORS.TEXT}
-          borderColor={COLORS.ACCENT}
-          _placeholder={{ color: COLORS.TEXT_MUTED }}
+          borderColor={COLORS.GOLD_DIM}
+          _placeholder={{ color: COLORS.GOLD_DIM }}
         />
         <Select
           value={selectedTier}
           onChange={(e) => setSelectedTier(e.target.value)}
-          bg={COLORS.INPUT_BG}
+          bg={COLORS.PANEL_MID}
           color={COLORS.TEXT}
-          borderColor={COLORS.ACCENT}
+          borderColor={COLORS.GOLD_DIM}
         >
           <option value="">All Tiers</option>
           {tiers.map((tier) => (
