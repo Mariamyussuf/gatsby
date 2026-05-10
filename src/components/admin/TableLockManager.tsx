@@ -48,15 +48,25 @@ export function TableLockManager() {
       .order("table_number")
 
     if (!error && data) {
-      const formatted: GalaTable[] = data.map((t: any) => ({
-        id: t.id,
-        tier_id: t.tier_id,
-        table_number: t.table_number,
-        seats_total: t.seats_total,
-        seats_booked: t.seats_booked,
-        is_locked: t.is_locked ?? false,
-        tier_name: t.ticket_tiers?.name ?? "Unknown",
-      }))
+      const formatted: GalaTable[] = data.map((t: any) => {
+        // FIX: Supabase joined relations return an array or object depending on
+        // whether it's a to-many or to-one relation. Safely handle both.
+        const tierRaw = t.ticket_tiers
+        const tierName: string =
+          Array.isArray(tierRaw)
+            ? (tierRaw[0]?.name ?? "Unknown")
+            : ((tierRaw as { name?: string } | null)?.name ?? "Unknown")
+
+        return {
+          id: t.id,
+          tier_id: t.tier_id,
+          table_number: t.table_number,
+          seats_total: t.seats_total,
+          seats_booked: t.seats_booked,
+          is_locked: t.is_locked ?? false,
+          tier_name: tierName,
+        }
+      })
       setTables(formatted)
     } else if (error) {
       toaster.create({ title: "Failed to load tables", type: "error" })
@@ -86,7 +96,6 @@ export function TableLockManager() {
       .eq("id", table.id)
 
     if (!error) {
-      // Optimistically update local state instead of re-fetching everything
       setTables((prev) =>
         prev.map((t) => (t.id === table.id ? { ...t, is_locked: newLocked } : t))
       )
@@ -163,8 +172,9 @@ export function TableLockManager() {
                 {table.is_locked ? "LOCKED" : "AVAILABLE"}
               </Badge>
             </HStack>
+            {/* FIX: Always render strings, never raw objects */}
             <Text color={COLORS.TEXT} fontSize="sm" mb={2}>
-              {table.tier_name}
+              {String(table.tier_name ?? "Unknown")}
             </Text>
             <Text color={COLORS.TEXT_MUTED} fontSize="xs" mb={4}>
               Seats: {table.seats_booked}/{table.seats_total}
