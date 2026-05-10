@@ -154,7 +154,7 @@ export function AdminDashboard() {
           ))}
         </Tabs.List>
 
-        <Tabs.Content value="overview"><TableMap /></Tabs.Content>
+        {/* <Tabs.Content value="overview"><TableMap /></Tabs.Content> */}
         <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
         <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>
