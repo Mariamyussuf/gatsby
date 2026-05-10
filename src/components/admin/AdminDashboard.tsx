@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
-import { Box, Text, VStack, HStack, Tabs, SimpleGrid, Button } from "@chakra-ui/react"
+import { Box, VStack, HStack, Heading, Text, Button, Badge, SimpleGrid, Input, Select, Spinner } from "@chakra-ui/react"
+import { Box, VStack, HStack, Text, Button, SimpleGrid } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import { AttendeeList } from "./AttendeeList"
@@ -10,6 +11,7 @@ import { ManualConfirmation } from "./ManualConfirmation"
 import { QRScanner } from "./QRScanner"
 import { VVIPPickupManager } from "./VVIPPickupManager"
 import { WaitlistAdmin } from "./WaitlistAdmin"
+import { Tabs } from "@chakra-ui/react"
 
 type Stats = {
   totalSold: number
@@ -17,7 +19,6 @@ type Stats = {
   byTier: { name: string; count: number; revenue: number }[]
 }
 
-// Defined OUTSIDE the component so React sees a stable reference
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <Box
@@ -85,7 +86,14 @@ export function AdminDashboard() {
 
       const tierMap: Record<string, { count: number; revenue: number; name: string }> = {}
       for (const t of txns) {
-        const tName = (t.ticket_tiers as { name: string } | null)?.name ?? "Unknown"
+        // FIX: Supabase joined relations return an array, not a plain object.
+        // ticket_tiers could be { name: string } | { name: string }[] | null
+        const tierRaw = t.ticket_tiers
+        const tName: string =
+          Array.isArray(tierRaw)
+            ? (tierRaw[0]?.name ?? "Unknown")
+            : ((tierRaw as { name?: string } | null)?.name ?? "Unknown")
+
         if (!tierMap[tName]) tierMap[tName] = { count: 0, revenue: 0, name: tName }
         tierMap[tName].count += t.quantity ?? 0
         tierMap[tName].revenue += (t.total_kobo ?? 0) / 100
@@ -144,7 +152,7 @@ export function AdminDashboard() {
         ))}
       </SimpleGrid>
 
-      {/* Tabs — defaultValue matches first actual Tabs.Content */}
+      {/* Tabs */}
       <Tabs.Root defaultValue="locks">
         <Tabs.List style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, marginBottom: "24px", overflowX: "auto" }}>
           {TABS.map(({ value, label }) => (
