@@ -119,13 +119,13 @@ export function AdminDashboard() {
       {/* Stats */}
       <SimpleGrid columns={{ base: 2, md: 4 }} gap="4" mb="10">
         <StatCard label="Tickets Sold" value={String(stats.totalSold)} />
-        <StatCard label="Total Revenue" value={`₦${stats.totalRevenue.toLocaleString()}`} />
+        <StatCard label="Total Revenue" value={`NGN ${stats.totalRevenue.toLocaleString()}`} />
         {stats.byTier.map((t) => (
           <StatCard
             key={t.name}
             label={`${t.name} Tickets`}
             value={String(t.count)}
-            sub={`₦${t.revenue.toLocaleString()}`}
+            sub={`NGN ${t.revenue.toLocaleString()}`}
           />
         ))}
       </SimpleGrid>

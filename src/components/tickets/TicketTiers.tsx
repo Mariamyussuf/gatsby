@@ -43,7 +43,8 @@ export function TicketTiers({ onSelect }: Props) {
       setDbError((tierErr || tableErr)?.message || "Database error")
     } else if (tierData && tableData) {
       const combined: TierWithData[] = tierData.map((t) => {
-        const tables = tableData.filter((tb) => tb.tier_id === t.id)
+        // Only include unlocked tables
+        const tables = tableData.filter((tb) => tb.tier_id === t.id && !tb.is_locked)
         const totalBooked = tables.reduce((s, tb) => s + tb.seats_booked, 0)
         return { ...t, tables, totalBooked }
       })
