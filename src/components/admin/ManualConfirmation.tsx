@@ -24,15 +24,15 @@ interface PendingTransaction {
   id: string
   reference: string
   payment_status: string
-  amount: number
+  total_kobo: number
   quantity: number
-  group_code: string
+  group_booking_code: string
   tier_id: string
-  tier_name: string
   table_id: string
-  table_number: number
-  attendees_count: number
   created_at: string
+  // Fetched separately after load
+  tier_name?: string
+  table_number?: number
 }
 
 // Safe string coercion — prevents objects from being rendered as JSX children
@@ -64,18 +64,50 @@ export function ManualConfirmation() {
     loadPendingTransactions()
   }, [])
 
+  const enrichWithTableAndTier = async (
+    rows: Omit<PendingTransaction, "tier_name" | "table_number">[]
+  ): Promise<PendingTransaction[]> => {
+    return Promise.all(
+      rows.map(async (txn) => {
+        let tier_name: string | undefined
+        let table_number: number | undefined
+
+        if (txn.tier_id) {
+          const { data: tierData } = await supabase
+            .from("tiers")
+            .select("name")
+            .eq("id", txn.tier_id)
+            .single()
+          tier_name = tierData?.name ?? undefined
+        }
+
+        if (txn.table_id) {
+          const { data: tableData } = await supabase
+            .from("gala_tables")
+            .select("table_number")
+            .eq("id", txn.table_id)
+            .single()
+          table_number = tableData?.table_number ?? undefined
+        }
+
+        return { ...txn, tier_name, table_number }
+      })
+    )
+  }
+
   const loadPendingTransactions = async () => {
     const { data, error } = await supabase
       .from("transactions")
       .select(
-        "id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at"
+        "id, reference, payment_status, total_kobo, quantity, group_booking_code, tier_id, table_id, created_at"
       )
       .eq("payment_status", "pending")
       .order("created_at", { ascending: false })
       .limit(10)
 
     if (!error && data) {
-      setPendingTransactions(data as PendingTransaction[])
+      const enriched = await enrichWithTableAndTier(data)
+      setPendingTransactions(enriched)
     }
   }
 
@@ -88,7 +120,7 @@ export function ManualConfirmation() {
       const { data: txn, error } = await supabase
         .from("transactions")
         .select(
-          "id, reference, payment_status, amount, quantity, group_code, tier_id, tier_name, table_id, table_number, created_at"
+          "id, reference, payment_status, total_kobo, quantity, group_booking_code, tier_id, table_id, created_at"
         )
         .eq("reference", reference.trim())
         .single()
@@ -97,7 +129,8 @@ export function ManualConfirmation() {
         toaster.create({ title: "Transaction not found", type: "error" })
         setTransaction(null)
       } else {
-        setTransaction(txn as PendingTransaction)
+        const [enriched] = await enrichWithTableAndTier([txn])
+        setTransaction(enriched)
       }
     } catch (err) {
       console.error("searchTransaction error:", err)
@@ -119,7 +152,7 @@ export function ManualConfirmation() {
 
       const { data: table } = await supabase
         .from("gala_tables")
-        .select("seats_booked, seats_total")
+        .select("seats_booked, seats_total, table_number")
         .eq("id", transaction.table_id)
         .single()
 
@@ -131,11 +164,11 @@ export function ManualConfirmation() {
       const pending: PendingBooking = {
         txnId: transaction.id,
         reference: transaction.reference,
-        groupCode: transaction.group_code,
+        groupCode: transaction.group_booking_code,
         tierId: transaction.tier_id,
-        tierName: transaction.tier_name,
+        tierName: transaction.tier_name ?? "",
         tableId: transaction.table_id,
-        tableNumber: transaction.table_number,
+        tableNumber: table.table_number,
         tableSeatsBooked: table.seats_booked,
         tableSeatsTotal: table.seats_total,
         quantity: transaction.quantity,
@@ -150,7 +183,7 @@ export function ManualConfirmation() {
 
       toaster.create({
         title: "Confirmed!",
-        description: `${transaction.quantity} tickets for ${transaction.group_code}. Email sent.`,
+        description: `${transaction.quantity} tickets for ${transaction.group_booking_code}. Email sent.`,
         type: "success",
       })
 
@@ -255,7 +288,6 @@ export function ManualConfirmation() {
                         <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">
                           Status
                         </Text>
-                        {/* Wrap Badge child in str() to prevent object rendering */}
                         <Badge colorScheme="orange">{str(transaction.payment_status)}</Badge>
                       </Box>
                       <Box>
@@ -263,7 +295,7 @@ export function ManualConfirmation() {
                           Amount
                         </Text>
                         <Text color={color(COLORS.TEXT)}>
-                          NGN {Number(transaction.amount).toLocaleString()}
+                          NGN {(transaction.total_kobo / 100).toLocaleString()}
                         </Text>
                       </Box>
                       <Box>
@@ -276,13 +308,17 @@ export function ManualConfirmation() {
                         <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">
                           Tier
                         </Text>
-                        <Text color={color(COLORS.TEXT)}>{str(transaction.tier_name)}</Text>
+                        <Text color={color(COLORS.TEXT)}>
+                          {transaction.tier_name ? str(transaction.tier_name) : "—"}
+                        </Text>
                       </Box>
                       <Box>
                         <Text fontSize="xs" color={color(COLORS.TEXT_MUTED)} textTransform="uppercase">
                           Table
                         </Text>
-                        <Text color={color(COLORS.TEXT)}>Table {Number(transaction.table_number)}</Text>
+                        <Text color={color(COLORS.TEXT)}>
+                          {transaction.table_number != null ? `Table ${transaction.table_number}` : "—"}
+                        </Text>
                       </Box>
                     </SimpleGrid>
 
@@ -332,7 +368,9 @@ export function ManualConfirmation() {
                         <Badge colorScheme="orange">{str(txn.payment_status)}</Badge>
                       </HStack>
                       <Text color={color(COLORS.TEXT)} fontSize="xs">
-                        {str(txn.tier_name)} • {Number(txn.quantity)} ticket(s) • Table {Number(txn.table_number)}
+                        {txn.tier_name ? str(txn.tier_name) : "—"} •{" "}
+                        {Number(txn.quantity)} ticket(s) •{" "}
+                        {txn.table_number != null ? `Table ${txn.table_number}` : "No table"}
                       </Text>
                     </Box>
                   ))}
