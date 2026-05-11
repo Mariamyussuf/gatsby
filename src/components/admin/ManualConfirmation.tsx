@@ -48,7 +48,8 @@ const str = (val: unknown): string => {
 
 export function ManualConfirmation() {
   const [reference, setReference] = useState("")
-  const [transaction, setTransaction] = useState<PendingTransaction | null>(null)
+  const [transaction, setTransaction] =
+    useState<PendingTransaction | null>(null)
 
   const [isLoading, setIsLoading] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
@@ -57,16 +58,19 @@ export function ManualConfirmation() {
     PendingTransaction[]
   >([])
 
-  const [activeTab, setActiveTab] = useState<"confirm" | "resend">(
-    "confirm"
-  )
+  const [activeTab, setActiveTab] = useState<
+    "confirm" | "resend"
+  >("confirm")
 
   useEffect(() => {
     loadPendingTransactions()
   }, [])
 
   const enrichWithTableAndTier = async (
-    rows: Omit<PendingTransaction, "tier_name" | "table_number">[]
+    rows: Omit<
+      PendingTransaction,
+      "tier_name" | "table_number"
+    >[]
   ): Promise<PendingTransaction[]> => {
     return Promise.all(
       rows.map(async (txn) => {
@@ -90,7 +94,8 @@ export function ManualConfirmation() {
             .eq("id", txn.table_id)
             .single()
 
-          table_number = tableData?.table_number ?? undefined
+          table_number =
+            tableData?.table_number ?? undefined
         }
 
         return {
@@ -124,7 +129,9 @@ export function ManualConfirmation() {
       .limit(10)
 
     if (!error && data) {
-      const enriched = await enrichWithTableAndTier(data)
+      const enriched =
+        await enrichWithTableAndTier(data)
+
       setPendingTransactions(enriched)
     }
   }
@@ -163,7 +170,8 @@ export function ManualConfirmation() {
 
         setTransaction(null)
       } else {
-        const [enriched] = await enrichWithTableAndTier([txn])
+        const [enriched] =
+          await enrichWithTableAndTier([txn])
 
         setTransaction(enriched)
       }
@@ -187,12 +195,12 @@ export function ManualConfirmation() {
     try {
       console.log("[ADMIN] Starting manual recovery")
 
-      // Fetch fresh transaction
-      const { data: txn, error: txnError } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("id", transaction.id)
-        .single()
+      const { data: txn, error: txnError } =
+        await supabase
+          .from("transactions")
+          .select("*")
+          .eq("id", transaction.id)
+          .single()
 
       if (txnError || !txn) {
         toaster.create({
@@ -203,14 +211,28 @@ export function ManualConfirmation() {
         return
       }
 
-      console.log("[ADMIN] Transaction loaded:", txn.reference)
+      // Prevent duplicate confirmation
+      if (txn.payment_status === "confirmed") {
+        toaster.create({
+          title: "Already confirmed",
+          description:
+            "This booking has already been confirmed.",
+          type: "warning",
+        })
 
-      // Fetch table
-      const { data: table, error: tableError } = await supabase
-        .from("gala_tables")
-        .select("seats_booked, seats_total, table_number")
-        .eq("id", txn.table_id)
-        .single()
+        return
+      }
+
+      const { data: table, error: tableError } =
+        await supabase
+          .from("gala_tables")
+          .select(`
+            seats_booked,
+            seats_total,
+            table_number
+          `)
+          .eq("id", txn.table_id)
+          .single()
 
       if (tableError || !table) {
         toaster.create({
@@ -221,18 +243,36 @@ export function ManualConfirmation() {
         return
       }
 
-      console.log("[ADMIN] Table loaded")
+      // Prevent duplicate attendees
+      const { data: existingAttendees } =
+        await supabase
+          .from("attendees")
+          .select("id")
+          .eq("transaction_id", txn.id)
 
-      // Build attendees from transaction
+      if (
+        existingAttendees &&
+        existingAttendees.length > 0
+      ) {
+        toaster.create({
+          title: "Attendees already exist",
+          description:
+            "Tickets have already been generated for this booking.",
+          type: "warning",
+        })
+
+        return
+      }
+
       const attendees = [
         {
-          firstName: txn.primary_first_name || "Guest",
+          firstName:
+            txn.primary_first_name || "Guest",
           email: txn.primary_email,
           isPrimary: true,
         },
       ]
 
-      // Create placeholder attendees if quantity > 1
       for (let i = 1; i < txn.quantity; i++) {
         attendees.push({
           firstName: `Guest ${i + 1}`,
@@ -240,8 +280,6 @@ export function ManualConfirmation() {
           isPrimary: false,
         })
       }
-
-      console.log("[ADMIN] Built attendees:", attendees)
 
       const pending: PendingBooking = {
         txnId: txn.id,
@@ -257,23 +295,15 @@ export function ManualConfirmation() {
         attendees,
       }
 
-      console.log("[ADMIN] Calling confirmBooking")
-
       await confirmBooking(
         pending,
-        `manual_${Date.now()}`,
-        {
-          manually_confirmed: true,
-          admin_panel: true,
-        }
+        `manual_${Date.now()}`
       )
-
-      console.log("[ADMIN] Recovery complete")
 
       toaster.create({
         title: "Booking confirmed",
         description:
-          "Tickets created and confirmation emails sent",
+          "Tickets created and confirmation emails sent.",
         type: "success",
       })
 
@@ -286,7 +316,8 @@ export function ManualConfirmation() {
 
       toaster.create({
         title: "Confirmation failed",
-        description: err?.message || "Unknown error",
+        description:
+          err?.message || "Unknown error",
         type: "error",
       })
     } finally {
@@ -299,18 +330,30 @@ export function ManualConfirmation() {
       <HStack gap={2}>
         <Button
           size="sm"
-          variant={activeTab === "confirm" ? "solid" : "outline"}
+          variant={
+            activeTab === "confirm"
+              ? "solid"
+              : "outline"
+          }
           colorPalette="orange"
-          onClick={() => setActiveTab("confirm")}
+          onClick={() =>
+            setActiveTab("confirm")
+          }
         >
           Manual Recovery
         </Button>
 
         <Button
           size="sm"
-          variant={activeTab === "resend" ? "solid" : "outline"}
+          variant={
+            activeTab === "resend"
+              ? "solid"
+              : "outline"
+          }
           colorPalette="orange"
-          onClick={() => setActiveTab("resend")}
+          onClick={() =>
+            setActiveTab("resend")
+          }
         >
           Resend Emails
         </Button>
@@ -332,11 +375,7 @@ export function ManualConfirmation() {
               border: `1px solid ${COLORS.GOLD_DIM}`,
             }}
           >
-            <CardHeader
-              style={{
-                borderBottom: `1px solid ${COLORS.GOLD_DIM}`,
-              }}
-            >
+            <CardHeader>
               <Heading
                 as="h3"
                 size="md"
@@ -347,279 +386,41 @@ export function ManualConfirmation() {
             </CardHeader>
 
             <CardBody>
-              <VStack gap={4} align="stretch">
-                <Text color={COLORS.TEXT} fontSize="sm">
-                  Enter a transaction reference to manually
-                  recover failed bookings.
-                </Text>
-
+              <VStack gap={4}>
                 <HStack w="100%">
                   <Input
-                    placeholder="e.g. GATSBY-177849..."
+                    placeholder="GATSBY-..."
                     value={reference}
                     onChange={(e) =>
                       setReference(e.target.value)
                     }
-                    onKeyDown={(e) =>
-                      e.key === "Enter" &&
-                      searchTransaction()
-                    }
-                    style={{
-                      background: COLORS.PANEL_MID,
-                      color: COLORS.TEXT,
-                      borderColor: COLORS.GOLD_DIM,
-                    }}
                   />
 
                   <Button
                     onClick={searchTransaction}
                     loading={isLoading}
                     colorPalette="orange"
-                    minW="120px"
                   >
                     Search
                   </Button>
                 </HStack>
 
-                {isLoading && (
-                  <Spinner color={COLORS.GOLD_BASE} />
-                )}
-
-                {!isLoading &&
-                  !transaction &&
-                  reference.trim() && (
-                    <Text color="red.500" fontSize="sm">
-                      Transaction not found
-                    </Text>
-                  )}
-
                 {transaction && (
-                  <Box
+                  <Button
                     w="100%"
-                    p={4}
-                    style={{
-                      background: COLORS.BG,
-                      borderRadius: "4px",
-                      border: `1px solid ${COLORS.GOLD_DIM}`,
-                    }}
+                    size="lg"
+                    colorPalette="green"
+                    loading={isConfirming}
+                    onClick={confirmTransaction}
                   >
-                    <SimpleGrid columns={2} gap={3} mb={4}>
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Reference
-                        </Text>
-
-                        <Text
-                          color={COLORS.GOLD_BASE}
-                          fontWeight="600"
-                        >
-                          {str(transaction.reference)}
-                        </Text>
-                      </Box>
-
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Status
-                        </Text>
-
-                        <Badge colorPalette="orange">
-                          {str(transaction.payment_status)}
-                        </Badge>
-                      </Box>
-
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Amount
-                        </Text>
-
-                        <Text color={COLORS.TEXT}>
-                          NGN{" "}
-                          {(
-                            transaction.total_kobo / 100
-                          ).toLocaleString()}
-                        </Text>
-                      </Box>
-
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Quantity
-                        </Text>
-
-                        <Text color={COLORS.TEXT}>
-                          {Number(transaction.quantity)} tickets
-                        </Text>
-                      </Box>
-
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Tier
-                        </Text>
-
-                        <Text color={COLORS.TEXT}>
-                          {transaction.tier_name || "—"}
-                        </Text>
-                      </Box>
-
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Table
-                        </Text>
-
-                        <Text color={COLORS.TEXT}>
-                          {transaction.table_number != null
-                            ? `Table ${transaction.table_number}`
-                            : "—"}
-                        </Text>
-                      </Box>
-
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Primary Guest
-                        </Text>
-
-                        <Text color={COLORS.TEXT}>
-                          {transaction.primary_first_name}{" "}
-                          {transaction.primary_last_name}
-                        </Text>
-                      </Box>
-
-                      <Box>
-                        <Text
-                          fontSize="xs"
-                          color={COLORS.GOLD_DIM}
-                          textTransform="uppercase"
-                        >
-                          Email
-                        </Text>
-
-                        <Text color={COLORS.TEXT}>
-                          {transaction.primary_email}
-                        </Text>
-                      </Box>
-                    </SimpleGrid>
-
-                    <Button
-                      w="100%"
-                      onClick={confirmTransaction}
-                      loading={isConfirming}
-                      colorPalette="green"
-                      size="lg"
-                    >
-                      Confirm and Send Tickets
-                    </Button>
-                  </Box>
+                    Confirm and Send Tickets
+                  </Button>
                 )}
               </VStack>
             </CardBody>
           </CardRoot>
 
-          {pendingTransactions.length > 0 && (
-            <CardRoot
-              style={{
-                background: COLORS.PANEL_MID,
-                border: `1px solid ${COLORS.GOLD_DIM}`,
-              }}
-            >
-              <CardHeader
-                style={{
-                  borderBottom: `1px solid ${COLORS.GOLD_DIM}`,
-                }}
-              >
-                <Heading
-                  as="h3"
-                  size="md"
-                  color={COLORS.GOLD_BASE}
-                >
-                  All Pending Transactions
-                </Heading>
-              </CardHeader>
-
-              <CardBody>
-                <SimpleGrid columns={1} gap={3}>
-                  {pendingTransactions.map((txn) => (
-                    <Box
-                      key={txn.id}
-                      p={3}
-                      style={{
-                        background: COLORS.BG,
-                        borderRadius: "4px",
-                        border: `1px solid ${COLORS.GOLD_DIM}`,
-                        cursor: "pointer",
-                      }}
-                      onClick={() => {
-                        setReference(txn.reference)
-                        setTransaction(null)
-                      }}
-                    >
-                      <HStack
-                        justify="space-between"
-                        mb={2}
-                      >
-                        <Text
-                          color={COLORS.GOLD_BASE}
-                          fontWeight="600"
-                          fontSize="sm"
-                        >
-                          {str(txn.reference)}
-                        </Text>
-
-                        <Badge colorPalette="orange">
-                          {str(txn.payment_status)}
-                        </Badge>
-                      </HStack>
-
-                      <Text
-                        color={COLORS.TEXT}
-                        fontSize="xs"
-                      >
-                        {txn.tier_name || "—"} •{" "}
-                        {Number(txn.quantity)} ticket(s) •{" "}
-                        {txn.table_number != null
-                          ? `Table ${txn.table_number}`
-                          : "No table"}
-                      </Text>
-
-                      <Text
-                        color={COLORS.GOLD_DIM}
-                        fontSize="xs"
-                        mt={1}
-                      >
-                        {txn.primary_email}
-                      </Text>
-                    </Box>
-                  ))}
-                </SimpleGrid>
-              </CardBody>
-            </CardRoot>
-          )}
+          <ResendEmails />
         </VStack>
       ) : (
         <ResendEmails />
