@@ -35,6 +35,43 @@ export function VVIPPickupManager() {
   const [editing, setEditing] = useState<Record<string, Partial<VvipRow>>>({})
 
   const fetchData = async () => {
+    // First, fetch all VVIP ticket buyers (tier_id = VVIP tier ID)
+    const { data: vvipTier } = await supabase
+      .from("ticket_tiers")
+      .select("id")
+      .eq("name", "VVIP")
+      .single()
+
+    if (!vvipTier) {
+      setLoading(false)
+      return
+    }
+
+    // Get all attendees with VVIP tickets
+    const { data: vvipAttendees } = await supabase
+      .from("attendees")
+      .select("id, first_name, last_name, email, ticket_id, table_number, transactions (primary_phone)")
+      .eq("tier_id", vvipTier.id)
+
+    // Auto-create vvip_pickups entries for VVIP ticket buyers who don't have one yet
+    if (vvipAttendees) {
+      for (const attendee of vvipAttendees) {
+        const { data: existing } = await supabase
+          .from("vvip_pickups")
+          .select("id")
+          .eq("attendee_id", attendee.id)
+          .single()
+
+        if (!existing) {
+          // Auto-create entry for this VVIP attendee
+          await supabase.from("vvip_pickups").insert({
+            attendee_id: attendee.id,
+          })
+        }
+      }
+    }
+
+    // Now fetch all vvip_pickups with attendee details
     const { data } = await supabase
       .from("vvip_pickups")
       .select("*, attendees (first_name, last_name, email, ticket_id, table_number, transactions (primary_phone))")

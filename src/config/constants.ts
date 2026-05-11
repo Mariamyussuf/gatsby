@@ -22,6 +22,7 @@ export const COLORS = {
   PANEL_DARK: "#2A0608",
   TEXT: "#F5D875",
   TEXT_DIM: "#C9962A",
+  TEXT_MUTED: "#8B6914",
   GOLD_GLOW: "#8B6914",
   GOLD_DIM: "#C9962A",
   GOLD_BASE: "#E8B84B",
@@ -29,6 +30,8 @@ export const COLORS = {
   GOLD_PALE: "#FBE9A0",
   CRIMSON: "#C0272D",
   CRIMSON_DEEP: "#8B0000",
+  ACCENT: "#E8B84B",
+  INPUT_BG: "#2A0608",
 } as const
 
 export const FITZGERALD_QUOTE =
