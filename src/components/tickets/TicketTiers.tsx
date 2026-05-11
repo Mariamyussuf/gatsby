@@ -10,7 +10,12 @@ import {
   SimpleGrid,
   useBreakpointValue,
 } from "@chakra-ui/react"
-import { DrawerRoot, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui/drawer"
+import {
+  DrawerRoot,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+} from "@/components/ui/drawer"
 import { supabase } from "@/lib/supabase"
 import type { TicketTier, GalaTable } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
@@ -20,6 +25,7 @@ import { WaitlistForm } from "@/components/booking/WaitlistForm"
 type TierWithData = TicketTier & {
   tables: GalaTable[]
   totalBooked: number
+  availableSeats: number
 }
 
 type Props = {
@@ -37,30 +43,82 @@ export function TicketTiers({ onSelect }: Props) {
   const [dbError, setDbError] = useState<string | null>(null)
 
   const fetchData = async () => {
-    const { data: tierData, error: tierErr } = await supabase.from("ticket_tiers").select("*").order("price_kobo")
-    const { data: tableData, error: tableErr } = await supabase.from("gala_tables").select("*")
+    setLoading(true)
+
+    const { data: tierData, error: tierErr } = await supabase
+      .from("ticket_tiers")
+      .select("*")
+      .order("price_kobo")
+
+    const { data: tableData, error: tableErr } = await supabase
+      .from("gala_tables")
+      .select("*")
+
     if (tierErr || tableErr) {
       setDbError((tierErr || tableErr)?.message || "Database error")
-    } else if (tierData && tableData) {
-      const combined: TierWithData[] = tierData.map((t) => {
-        // Only include unlocked tables
-        const tables = tableData.filter((tb) => tb.tier_id === t.id && !tb.is_locked)
-        const totalBooked = tables.reduce((s, tb) => s + tb.seats_booked, 0)
-        return { ...t, tables, totalBooked }
+      setLoading(false)
+      return
+    }
+
+    if (tierData && tableData) {
+      const combined: TierWithData[] = tierData.map((tier) => {
+        // ALL tables in this tier
+        const allTables = tableData.filter(
+          (tb) => tb.tier_id === tier.id
+        )
+
+        // Only unlocked tables can be selected
+        const unlockedTables = allTables.filter(
+          (tb) => !tb.is_locked
+        )
+
+        // Count ALL booked seats
+        const totalBooked = allTables.reduce(
+          (sum, tb) => sum + tb.seats_booked,
+          0
+        )
+
+        // Count ONLY selectable remaining seats
+        const availableSeats = unlockedTables.reduce(
+          (sum, tb) => sum + (tb.seats_total - tb.seats_booked),
+          0
+        )
+
+        return {
+          ...tier,
+          tables: unlockedTables,
+          totalBooked,
+          availableSeats,
+        }
       })
+
       setTiers(combined)
     }
+
     setLoading(false)
   }
 
   useEffect(() => {
     fetchData()
-    const channel = supabase.channel("tables-live")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "gala_tables" }, () => {
-        fetchData()
-      })
+
+    const channel = supabase
+      .channel("tables-live")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "gala_tables",
+        },
+        () => {
+          fetchData()
+        }
+      )
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   if (loading) {
@@ -73,50 +131,58 @@ export function TicketTiers({ onSelect }: Props) {
 
   if (dbError || tiers.length === 0) {
     return (
-      <Box id="tickets" py="20" px={{ base: "4", md: "8" }} textAlign="center">
+      <Box
+        id="tickets"
+        py="20"
+        px={{ base: "4", md: "8" }}
+        textAlign="center"
+      >
         <VStack gap="6" maxW="560px" mx="auto">
           <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-            <polygon points="24,4 44,18 44,30 24,44 4,30 4,18" fill="none" stroke={COLORS.GOLD_DIM} strokeWidth="2" opacity="0.6" />
+            <polygon
+              points="24,4 44,18 44,30 24,44 4,30 4,18"
+              fill="none"
+              stroke={COLORS.GOLD_DIM}
+              strokeWidth="2"
+              opacity="0.6"
+            />
           </svg>
-          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "2rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>
+
+          <Text
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "2rem",
+              fontWeight: "700",
+              color: COLORS.GOLD_BRIGHT,
+            }}
+          >
             Database Setup Required
           </Text>
-          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.7rem", letterSpacing: "0.08em", color: COLORS.GOLD_DIM, lineHeight: "1.8" }}>
+
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.7rem",
+              letterSpacing: "0.08em",
+              color: COLORS.GOLD_DIM,
+              lineHeight: "1.8",
+            }}
+          >
             {dbError
               ? `Connection error: ${dbError}`
               : "No ticket tiers found. Run the seed SQL in your Supabase SQL Editor to populate the event data."}
           </Text>
-          <Box
-            w="full"
-            p="5"
-            textAlign="left"
-            style={{ border: `1px solid ${COLORS.GOLD_DIM}30`, background: `${COLORS.PANEL_MID}40` }}
-          >
-            <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", letterSpacing: "0.2em", color: COLORS.GOLD_DIM, textTransform: "uppercase", marginBottom: "12px" }}>
-              Steps to set up:
-            </Text>
-            {[
-              "Go to your Supabase project dashboard",
-              "Open the SQL Editor",
-              "Run supabase/migrations/20260414194127_create_gatsby_gala_schema.sql",
-              "Then run supabase/migrations/20260418000000_seed_and_rpc.sql",
-              "Refresh this page",
-            ].map((step, i) => (
-              <HStack key={i} gap="3" mb="2" align="start">
-                <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: COLORS.GOLD_BASE, minWidth: "16px" }}>{i + 1}.</Text>
-                <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.65rem", color: COLORS.GOLD_DIM, letterSpacing: "0.05em", lineHeight: "1.6" }}>{step}</Text>
-              </HStack>
-            ))}
-          </Box>
         </VStack>
       </Box>
     )
   }
 
   const handleTierSelect = (tier: TierWithData) => {
-    if (tier.totalBooked >= tier.max_capacity) return
+    if (tier.availableSeats <= 0) return
+
     setSelectedTierId(tier.id)
     setSelectedTable(null)
+
     if (isMobile) {
       setIsDrawerOpen(true)
     }
@@ -124,8 +190,11 @@ export function TicketTiers({ onSelect }: Props) {
 
   const handleTableSelect = (table: GalaTable) => {
     setSelectedTable(table)
+
     const tier = tiers.find((t) => t.id === selectedTierId)!
+
     onSelect(tier, table)
+
     if (isMobile) {
       setIsDrawerOpen(false)
     }
@@ -148,6 +217,7 @@ export function TicketTiers({ onSelect }: Props) {
         >
           ✦ Reserve Your Place ✦
         </Text>
+
         <Text
           style={{
             fontFamily: "'Cormorant Garamond', serif",
@@ -160,19 +230,29 @@ export function TicketTiers({ onSelect }: Props) {
         >
           Ticket Tiers
         </Text>
+
         <Box w="120px">
-          <div style={{ height: "1px", background: `linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}, transparent)` }} />
+          <div
+            style={{
+              height: "1px",
+              background: `linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}, transparent)`,
+            }}
+          />
         </Box>
       </VStack>
 
       {/* Tier cards */}
-      <SimpleGrid columns={{ base: 1, md: 3 }} gap="0" maxW="1100px" mx="auto">
+      <SimpleGrid
+        columns={{ base: 1, md: 3 }}
+        gap="0"
+        maxW="1100px"
+        mx="auto"
+      >
         {tiers.map((tier, idx) => {
-          const isSoldOut = tier.totalBooked >= tier.max_capacity
+          const remaining = tier.availableSeats
+          const isSoldOut = remaining <= 0
           const isSelected = selectedTierId === tier.id
-          const remaining = tier.max_capacity - tier.totalBooked
           const isVVIP = tier.name === "VVIP"
-          const isVIP = tier.name === "VIP"
 
           return (
             <Box
@@ -198,7 +278,7 @@ export function TicketTiers({ onSelect }: Props) {
                     : "none",
               }}
             >
-              {/* Featured badge for VVIP */}
+              {/* VVIP badge */}
               {isVVIP && (
                 <Box
                   position="absolute"
@@ -245,15 +325,16 @@ export function TicketTiers({ onSelect }: Props) {
                     fontFamily: "'Cormorant Garamond', serif",
                     fontSize: "3rem",
                     fontWeight: "700",
-                    color: isSelected ? COLORS.GOLD_BRIGHT : COLORS.GOLD_BASE,
+                    color: isSelected
+                      ? COLORS.GOLD_BRIGHT
+                      : COLORS.GOLD_BASE,
                     lineHeight: "1",
-                    textShadow: isSelected ? `0 0 20px ${COLORS.GOLD_GLOW}` : "none",
                   }}
                 >
                   ₦{(tier.price_kobo / 100).toLocaleString()}
                 </Text>
 
-                {/* Seating info */}
+                {/* Table info */}
                 <Text
                   textAlign="center"
                   style={{
@@ -264,17 +345,30 @@ export function TicketTiers({ onSelect }: Props) {
                     opacity: 0.8,
                   }}
                 >
-                  {tier.seats_per_table} seats per table · {tier.total_tables} tables
+                  {tier.seats_per_table} seats per table ·{" "}
+                  {tier.total_tables} tables
                 </Text>
 
-                {/* Divider */}
-                <div style={{ height: "1px", background: `linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}60, transparent)` }} />
+                <div
+                  style={{
+                    height: "1px",
+                    background: `linear-gradient(90deg, transparent, ${COLORS.GOLD_DIM}60, transparent)`,
+                  }}
+                />
 
                 {/* Perks */}
                 <VStack gap="2" align="stretch" flex="1">
                   {tier.perks.map((perk, i) => (
                     <HStack key={i} gap="3">
-                      <Text style={{ color: COLORS.GOLD_BRIGHT, fontSize: "0.6rem" }}>◆</Text>
+                      <Text
+                        style={{
+                          color: COLORS.GOLD_BRIGHT,
+                          fontSize: "0.6rem",
+                        }}
+                      >
+                        ◆
+                      </Text>
+
                       <Text
                         style={{
                           fontFamily: "'Josefin Sans', sans-serif",
@@ -310,16 +404,20 @@ export function TicketTiers({ onSelect }: Props) {
                         fontFamily: "'Josefin Sans', sans-serif",
                         fontSize: "0.6rem",
                         letterSpacing: "0.15em",
-                        color: remaining <= 10 ? "#F97316" : COLORS.GOLD_DIM,
+                        color:
+                          remaining <= 10
+                            ? "#F97316"
+                            : COLORS.GOLD_DIM,
                         opacity: 0.9,
                       }}
                     >
-                      {remaining} seat{remaining !== 1 ? "s" : ""} remaining
+                      {remaining} seat
+                      {remaining !== 1 ? "s" : ""} remaining
                     </Text>
                   )}
                 </Box>
 
-                {/* Select button */}
+                {/* Button */}
                 {isSoldOut ? (
                   <WaitlistForm tier={tier} compact />
                 ) : (
@@ -330,14 +428,14 @@ export function TicketTiers({ onSelect }: Props) {
                         ? `linear-gradient(135deg, ${COLORS.GOLD_DIM}, ${COLORS.GOLD_BRIGHT})`
                         : "transparent",
                       border: `1px solid ${COLORS.GOLD_DIM}`,
-                      color: isSelected ? COLORS.BG : COLORS.GOLD_BASE,
+                      color: isSelected
+                        ? COLORS.BG
+                        : COLORS.GOLD_BASE,
                       fontFamily: "'Josefin Sans', sans-serif",
                       fontSize: "0.65rem",
                       fontWeight: "600",
                       letterSpacing: "0.2em",
                       textTransform: "uppercase",
-                      cursor: "pointer",
-                      transition: "all 0.3s ease",
                       height: "44px",
                     }}
                     _hover={{
@@ -354,7 +452,7 @@ export function TicketTiers({ onSelect }: Props) {
         })}
       </SimpleGrid>
 
-      {/* Table Picker - Desktop inline */}
+      {/* Desktop picker */}
       {selectedTier && !isMobile && (
         <Box mt="12">
           <TablePicker
@@ -366,7 +464,7 @@ export function TicketTiers({ onSelect }: Props) {
         </Box>
       )}
 
-      {/* Table Picker - Mobile drawer */}
+      {/* Mobile picker */}
       {selectedTier && isMobile && (
         <DrawerRoot
           size="full"
@@ -380,7 +478,10 @@ export function TicketTiers({ onSelect }: Props) {
               borderTop: `1px solid ${COLORS.GOLD_DIM}40`,
             }}
           >
-            <DrawerHeader borderBottomWidth="1px" borderColor={`${COLORS.GOLD_DIM}40`}>
+            <DrawerHeader
+              borderBottomWidth="1px"
+              borderColor={`${COLORS.GOLD_DIM}40`}
+            >
               <Text
                 style={{
                   fontFamily: "'Cormorant Garamond', serif",
@@ -392,6 +493,7 @@ export function TicketTiers({ onSelect }: Props) {
                 Choose Your Table
               </Text>
             </DrawerHeader>
+
             <DrawerBody py="6">
               <TablePicker
                 tier={selectedTier}
