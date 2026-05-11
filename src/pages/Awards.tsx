@@ -39,9 +39,9 @@ const AWARD_GROUPS = [
     type: "social",
     name: "Social Awards",
     awards: [
-      "Freshest Fresher of the Year",
+      "Freshest Fresher of the Year [100 Level Only]",
       "Rookie of the Year",
-      "Next Rated",
+      "Next Rated [100 Level Only]",
       "Most Fashionable (Female)",
       "Most Fashionable (Male)",
       "Most Influential (Female)",
@@ -100,13 +100,23 @@ const AWARD_GROUPS = [
     name: "Leadership Awards",
     awards: [
       "Academic Excellence Award",
-      "Student of the Year",
+      "Most Outstanding Student of the Year",
       "Distinguished Executive (Female)",
       "Distinguished Executive (Male)",
       "Lecturer of the Year",
     ],
   },
 ]
+
+// Helper to strip bracket note from display name
+function stripNote(name: string) {
+  return name.replace(/\s*\[.*?\]/, "")
+}
+
+// Helper to extract bracket note
+function extractNote(name: string) {
+  return name.match(/\[(.*?)\]/)?.[1] ?? null
+}
 
 const inputStyles = {
   bg: `${COLORS.PANEL_DARK}40` as const,
@@ -137,6 +147,26 @@ function FormField({
       {children}
       {error && <Text color={COLORS.CRIMSON} fontSize="xs" mt={1}>{error}</Text>}
     </Box>
+  )
+}
+
+// Small inline badge component
+function NoteBadge({ note }: { note: string }) {
+  return (
+    <Text
+      as="span"
+      color={COLORS.GOLD_BASE}
+      fontSize="7px"
+      letterSpacing="1px"
+      textTransform="uppercase"
+      border={`1px solid ${COLORS.GOLD_DIM}50`}
+      px={1.5}
+      py={0.5}
+      borderRadius="2px"
+      display="inline-block"
+    >
+      {note}
+    </Text>
   )
 }
 
@@ -227,20 +257,6 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
                 <Text color={COLORS.GOLD_DIM} fontSize="10px" letterSpacing="1px" textTransform="uppercase">
                   {group.name}
                 </Text>
-                {group.badge && (
-                  <Text
-                    color={COLORS.GOLD_BASE}
-                    fontSize="8px"
-                    letterSpacing="1px"
-                    textTransform="uppercase"
-                    border={`1px solid ${COLORS.GOLD_DIM}50`}
-                    px={1.5}
-                    py={0.5}
-                    borderRadius="2px"
-                  >
-                    {group.badge}
-                  </Text>
-                )}
                 <Text color={`${COLORS.GOLD_DIM}70`} fontSize="10px">
                   {group.awards.length} award{group.awards.length !== 1 ? "s" : ""}
                 </Text>
@@ -398,12 +414,14 @@ export default function AwardsPage() {
       const allNominations = Object.values(nominations).flat()
 
       const inserts = allNominations.map((nom) => {
+        // Strip the bracket note before saving to DB
+        const cleanCategoryName = stripNote(nom.categoryName)
         const dbCat = dbCategories.find(
-          (c) => c.name.toLowerCase().trim() === nom.categoryName.toLowerCase().trim()
+          (c) => c.name.toLowerCase().trim() === cleanCategoryName.toLowerCase().trim()
         )
         return {
           award_category_id: dbCat?.id ?? null,
-          award_category_name: nom.categoryName,
+          award_category_name: cleanCategoryName,
           nominee_name: nom.nomineeName,
           nominator_name: nominator.name,
           nominator_email: nominator.email,
@@ -716,52 +734,44 @@ export default function AwardsPage() {
                     >
                       {group.name}
                     </Heading>
-                    {group.badge && (
-                      <Text
-                        color={COLORS.GOLD_BASE}
-                        fontSize="8px"
-                        letterSpacing="1.5px"
-                        textTransform="uppercase"
-                        border={`1px solid ${COLORS.GOLD_DIM}50`}
-                        px={2}
-                        py={0.5}
-                        borderRadius="2px"
-                      >
-                        {group.badge}
-                      </Text>
-                    )}
                   </HStack>
                   <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">
                     Enter the nominee's name for each award below.
                   </Text>
                 </VStack>
 
-                {groupNominations.map((nom, i) => (
-                  <Box
-                    key={`${group.type}_${i}`}
-                    borderLeft={`1px solid ${COLORS.GOLD_DIM}30`}
-                    pl={4}
-                    py={1}
-                  >
-                    <Text
-                      color={COLORS.GOLD_DIM}
-                      fontSize="xs"
-                      textTransform="uppercase"
-                      letterSpacing="1px"
-                      mb={2}
+                {groupNominations.map((nom, i) => {
+                  const label = stripNote(nom.categoryName)
+                  const note = extractNote(nom.categoryName)
+                  return (
+                    <Box
+                      key={`${group.type}_${i}`}
+                      borderLeft={`1px solid ${COLORS.GOLD_DIM}30`}
+                      pl={4}
+                      py={1}
                     >
-                      {nom.categoryName}
-                    </Text>
-                    <FormField label="Nominee's Full Name *" error={errors[`${group.type}_${i}`]}>
-                      <Input
-                        placeholder="Who are you nominating?"
-                        value={nom.nomineeName}
-                        onChange={(e) => updateNomination(group.type, i, e.target.value)}
-                        {...inputStyles}
-                      />
-                    </FormField>
-                  </Box>
-                ))}
+                      <HStack gap={2} mb={2} align="center">
+                        <Text
+                          color={COLORS.GOLD_DIM}
+                          fontSize="xs"
+                          textTransform="uppercase"
+                          letterSpacing="1px"
+                        >
+                          {label}
+                        </Text>
+                        {note && <NoteBadge note={note} />}
+                      </HStack>
+                      <FormField label="Nominee's Full Name *" error={errors[`${group.type}_${i}`]}>
+                        <Input
+                          placeholder="Who are you nominating?"
+                          value={nom.nomineeName}
+                          onChange={(e) => updateNomination(group.type, i, e.target.value)}
+                          {...inputStyles}
+                        />
+                      </FormField>
+                    </Box>
+                  )
+                })}
               </VStack>
             )
           })()}
@@ -811,12 +821,21 @@ export default function AwardsPage() {
                     {group.name}
                   </Text>
                   <VStack gap={2} align="stretch">
-                    {(nominations[group.type] || []).map((nom, i) => (
-                      <HStack key={i} justify="space-between" align="start">
-                        <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs" flex={1} pr={4}>{nom.categoryName}</Text>
-                        <Text color={COLORS.GOLD_BRIGHT} fontSize="xs" fontWeight="500" textAlign="right">{nom.nomineeName}</Text>
-                      </HStack>
-                    ))}
+                    {(nominations[group.type] || []).map((nom, i) => {
+                      const label = stripNote(nom.categoryName)
+                      const note = extractNote(nom.categoryName)
+                      return (
+                        <HStack key={i} justify="space-between" align="start">
+                          <HStack gap={2} flex={1} pr={4} align="center">
+                            <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">{label}</Text>
+                            {note && <NoteBadge note={note} />}
+                          </HStack>
+                          <Text color={COLORS.GOLD_BRIGHT} fontSize="xs" fontWeight="500" textAlign="right">
+                            {nom.nomineeName}
+                          </Text>
+                        </HStack>
+                      )
+                    })}
                   </VStack>
                 </Box>
               ))}
