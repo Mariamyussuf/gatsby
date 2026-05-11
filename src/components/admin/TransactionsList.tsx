@@ -18,32 +18,24 @@ interface Transaction {
   confirmed_at: string | null
 }
 
-export function TransactionsList() {
+type StatusFilter = "all" | "pending" | "confirmed"
+
+export type TransactionsListProps = {
+  /** Opens Payments & recovery with this reference prefilled. */
+  onRecoverPending?: (reference: string) => void
+}
+
+export function TransactionsList(props: TransactionsListProps = {}) {
+  const { onRecoverPending } = props
+
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [filtered, setFiltered] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [searchRef, setSearchRef] = useState("")
-
-  useEffect(() => {
-    fetchTransactions()
-  }, [])
-
-  useEffect(() => {
-    if (searchRef.trim()) {
-      setFiltered(
-        transactions.filter(
-          (t) =>
-            t.reference.toLowerCase().includes(searchRef.toLowerCase()) ||
-            t.primary_email.toLowerCase().includes(searchRef.toLowerCase()) ||
-            t.primary_first_name.toLowerCase().includes(searchRef.toLowerCase())
-        )
-      )
-    } else {
-      setFiltered(transactions)
-    }
-  }, [searchRef, transactions])
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
 
   const fetchTransactions = async () => {
+    setLoading(true)
     try {
       const { data, error } = await supabase
         .from("transactions")
@@ -62,6 +54,32 @@ export function TransactionsList() {
     }
   }
 
+  useEffect(() => {
+    void fetchTransactions()
+  }, [])
+
+  useEffect(() => {
+    let list = transactions
+
+    if (statusFilter === "pending") {
+      list = list.filter((t) => t.payment_status === "pending")
+    } else if (statusFilter === "confirmed") {
+      list = list.filter((t) => t.payment_status === "confirmed")
+    }
+
+    const q = searchRef.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (t) =>
+          t.reference.toLowerCase().includes(q) ||
+          t.primary_email.toLowerCase().includes(q) ||
+          t.primary_first_name.toLowerCase().includes(q),
+      )
+    }
+
+    setFiltered(list)
+  }, [searchRef, transactions, statusFilter])
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—"
     return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -78,17 +96,43 @@ export function TransactionsList() {
 
   return (
     <VStack spacing={6} align="stretch">
-      <HStack>
-        <Heading size="lg" color={COLORS.GOLD_BASE}>
-          Transactions
-        </Heading>
-        <Text color={COLORS.TEXT_MUTED} fontSize="sm">
-          ({filtered.length} total)
-        </Text>
+      <HStack flexWrap="wrap" justify="space-between" gap={4}>
+        <HStack>
+          <Heading size="lg" color={COLORS.GOLD_BASE}>
+            Transactions
+          </Heading>
+          <Text color={COLORS.TEXT_MUTED} fontSize="sm">
+            ({filtered.length} shown)
+          </Text>
+        </HStack>
+        <Button size="sm" variant="outline" onClick={() => void fetchTransactions()}>
+          Refresh
+        </Button>
+      </HStack>
+
+      <Text fontSize="sm" color={COLORS.TEXT_MUTED} maxW="800px">
+        Paid in Squad but still <strong>pending</strong> here? Use <strong>Recover</strong> to open Payments &amp; recovery
+        with that reference, or go to the <strong>Payments &amp; recovery</strong> tab to confirm, sync the DB, or resend
+        emails.
+      </Text>
+
+      <HStack flexWrap="wrap" gap={2}>
+        {(["all", "pending", "confirmed"] as const).map((f) => (
+          <Button
+            key={f}
+            size="xs"
+            variant={statusFilter === f ? "solid" : "outline"}
+            colorPalette={statusFilter === f ? "orange" : "gray"}
+            onClick={() => setStatusFilter(f)}
+            textTransform="capitalize"
+          >
+            {f}
+          </Button>
+        ))}
       </HStack>
 
       <Input
-        placeholder="Search by reference, email, or name..."
+        placeholder="Search by reference, email, or first name..."
         value={searchRef}
         onChange={(e) => setSearchRef(e.target.value)}
         bg={COLORS.INPUT_BG}
@@ -122,6 +166,11 @@ export function TransactionsList() {
               <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600">
                 Date
               </Table.ColumnHeader>
+              {onRecoverPending && (
+                <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600" textAlign="right">
+                  Actions
+                </Table.ColumnHeader>
+              )}
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -155,6 +204,19 @@ export function TransactionsList() {
                 <Table.Cell color={COLORS.TEXT_MUTED} fontSize="sm">
                   {formatDate(t.created_at)}
                 </Table.Cell>
+                {onRecoverPending && (
+                  <Table.Cell textAlign="right">
+                    {t.payment_status === "pending" ? (
+                      <Button size="xs" variant="outline" colorPalette="orange" onClick={() => onRecoverPending(t.reference)}>
+                        Recover
+                      </Button>
+                    ) : (
+                      <Text fontSize="xs" color={COLORS.TEXT_MUTED}>
+                        —
+                      </Text>
+                    )}
+                  </Table.Cell>
+                )}
               </Table.Row>
             ))}
           </Table.Body>

@@ -12,12 +12,14 @@ import { AwardsNominationsList } from "./AwardsNominationsList"
 import { VVIPPickupManager } from "./VVIPPickupManager"
 import { WaitlistAdmin } from "./WaitlistAdmin"
 import { QRScanner } from "./QRScanner"
+import { ManualConfirmation } from "./ManualConfirmation"
 
 const tabs = [
   { value: "overview", label: "Overview" },
   { value: "tables", label: "Table Map" },
   { value: "locks", label: "Table Locks" },
   { value: "transactions", label: "Transactions" },
+  { value: "manual", label: "Payments & recovery" },
   { value: "attendees", label: "Attendees" },
   { value: "awards", label: "Awards" },
   { value: "vvip", label: "VVIP Pickups" },
@@ -27,6 +29,7 @@ const tabs = [
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
+  const [presetManualReference, setPresetManualReference] = useState<string | null>(null)
 
   return (
     <Box bg={COLORS.BG} minH="100vh" p={6}>
@@ -67,7 +70,19 @@ export function AdminDashboard() {
           </Tabs.Content>
 
           <Tabs.Content value="transactions">
-            <TransactionsList />
+            <TransactionsList
+              onRecoverPending={(ref) => {
+                setPresetManualReference(ref)
+                setActiveTab("manual")
+              }}
+            />
+          </Tabs.Content>
+
+          <Tabs.Content value="manual">
+            <ManualConfirmation
+              presetReference={presetManualReference}
+              onPresetConsumed={() => setPresetManualReference(null)}
+            />
           </Tabs.Content>
 
           <Tabs.Content value="attendees">
