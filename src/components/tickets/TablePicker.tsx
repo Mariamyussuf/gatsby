@@ -10,10 +10,18 @@ type Props = {
   highlightMessage?: string
 }
 
-export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMessage }: Props) {
+export function TablePicker({
+  tier,
+  tables,
+  selectedTable,
+  onSelect,
+  highlightMessage,
+}: Props) {
   const scrollToForm = () => {
     setTimeout(() => {
-      document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" })
+      document
+        .getElementById("booking-form")
+        ?.scrollIntoView({ behavior: "smooth" })
     }, 100)
   }
 
@@ -47,6 +55,7 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
           >
             ✦ {tier.name} Section ✦
           </Text>
+
           <Text
             style={{
               fontFamily: "'Cormorant Garamond', serif",
@@ -57,6 +66,7 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
           >
             Choose Your Table
           </Text>
+
           <Text
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
@@ -70,7 +80,7 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
           </Text>
         </VStack>
 
-        {/* Alert message */}
+        {/* Alert */}
         {highlightMessage && (
           <Box
             p="3"
@@ -103,10 +113,16 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
           {[
             { color: COLORS.GOLD_DIM, label: "Available" },
             { color: "#F97316", label: "Almost Full" },
-            { color: "#444", label: "Fully Booked" },
+            { color: "#444", label: "Full / Reserved" },
           ].map(({ color, label }) => (
             <Box key={label} display="flex" alignItems="center" gap="2">
-              <Box w="10px" h="10px" borderRadius="full" style={{ backgroundColor: color }} />
+              <Box
+                w="10px"
+                h="10px"
+                borderRadius="full"
+                style={{ backgroundColor: color }}
+              />
+
               <Text
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
@@ -122,15 +138,26 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
           ))}
         </Box>
 
-        {/* Table grid */}
+        {/* Tables */}
         <SimpleGrid columns={{ base: 4, sm: 5, md: 10 }} gap="2">
           {tables
             .sort((a, b) => a.table_number - b.table_number)
             .map((table) => {
-              const seatsLeft = table.seats_total - table.seats_booked
-              const isFull = seatsLeft <= 0
-              const isAlmostFull = seatsLeft <= 2 && seatsLeft > 0
-              const isSelected = selectedTable?.id === table.id
+              const seatsLeft =
+                table.seats_total - table.seats_booked
+
+              const isLocked = table.is_locked
+
+              const isFull =
+                seatsLeft <= 0 || isLocked
+
+              const isAlmostFull =
+                seatsLeft <= 2 &&
+                seatsLeft > 0 &&
+                !isLocked
+
+              const isSelected =
+                selectedTable?.id === table.id
 
               let borderColor = COLORS.GOLD_DIM
               let textColor = COLORS.GOLD_BASE
@@ -155,7 +182,9 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
                 <Box
                   key={table.id}
                   as="button"
-                  onClick={() => !isFull && handleSelect(table)}
+                  onClick={() =>
+                    !isFull && handleSelect(table)
+                  }
                   disabled={isFull}
                   position="relative"
                   p="2"
@@ -163,29 +192,39 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
                   style={{
                     border: `1px solid ${borderColor}`,
                     background: bgColor,
-                    cursor: isFull ? "not-allowed" : "pointer",
+                    cursor: isFull
+                      ? "not-allowed"
+                      : "pointer",
                     transition: "all 0.2s ease",
-                    opacity: isFull ? 0.4 : 1,
+                    opacity: isFull ? 0.45 : 1,
                   }}
-                  _hover={!isFull ? {
-                    background: `${COLORS.GOLD_GLOW}30`,
-                    borderColor: COLORS.GOLD_BASE,
-                    transform: "scale(1.05)",
-                  } : {}}
+                  _hover={
+                    !isFull
+                      ? {
+                          background: `${COLORS.GOLD_GLOW}30`,
+                          borderColor: COLORS.GOLD_BASE,
+                          transform: "scale(1.05)",
+                        }
+                      : {}
+                  }
                 >
-                  {isAlmostFull && !isFull && (
+                  {/* Almost full badge */}
+                  {isAlmostFull && (
                     <Box
                       position="absolute"
                       top="-6px"
                       left="50%"
-                      style={{ transform: "translateX(-50%)" }}
+                      style={{
+                        transform: "translateX(-50%)",
+                      }}
                     >
                       <Badge
                         style={{
                           background: "#F97316",
                           color: "white",
                           fontSize: "0.4rem",
-                          fontFamily: "'Josefin Sans', sans-serif",
+                          fontFamily:
+                            "'Josefin Sans', sans-serif",
                           letterSpacing: "0.05em",
                           padding: "1px 4px",
                           whiteSpace: "nowrap",
@@ -195,21 +234,45 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
                       </Badge>
                     </Box>
                   )}
+
+                  {/* Table label */}
                   <Text
                     style={{
-                      fontFamily: "'Josefin Sans', sans-serif",
+                      fontFamily:
+                        "'Josefin Sans', sans-serif",
                       fontSize: "0.65rem",
                       fontWeight: "600",
                       letterSpacing: "0.1em",
                       color: textColor,
                     }}
                   >
-                    {isFull ? "Full" : `T${table.table_number}`}
+                    {isLocked
+                      ? `T${table.table_number}`
+                      : isFull
+                        ? "Full"
+                        : `T${table.table_number}`}
                   </Text>
-                  {!isFull && (
+
+                  {/* Status */}
+                  {isLocked ? (
                     <Text
                       style={{
-                        fontFamily: "'Josefin Sans', sans-serif",
+                        fontFamily:
+                          "'Josefin Sans', sans-serif",
+                        fontSize: "0.45rem",
+                        color: "#777",
+                        opacity: 0.9,
+                        letterSpacing: "0.05em",
+                        marginTop: "2px",
+                      }}
+                    >
+                      Reserved
+                    </Text>
+                  ) : !isFull ? (
+                    <Text
+                      style={{
+                        fontFamily:
+                          "'Josefin Sans', sans-serif",
                         fontSize: "0.45rem",
                         color: textColor,
                         opacity: 0.8,
@@ -219,12 +282,27 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
                     >
                       {seatsLeft}/{table.seats_total}
                     </Text>
+                  ) : (
+                    <Text
+                      style={{
+                        fontFamily:
+                          "'Josefin Sans', sans-serif",
+                        fontSize: "0.45rem",
+                        color: "#666",
+                        opacity: 0.8,
+                        letterSpacing: "0.05em",
+                        marginTop: "2px",
+                      }}
+                    >
+                      Unavailable
+                    </Text>
                   )}
                 </Box>
               )
             })}
         </SimpleGrid>
 
+        {/* Selected table */}
         {selectedTable && (
           <Box
             textAlign="center"
@@ -243,7 +321,9 @@ export function TablePicker({ tier, tables, selectedTable, onSelect, highlightMe
               }}
             >
               Table {selectedTable.table_number} selected ·{" "}
-              {selectedTable.seats_total - selectedTable.seats_booked} seats available
+              {selectedTable.seats_total -
+                selectedTable.seats_booked}{" "}
+              seats available
             </Text>
           </Box>
         )}
