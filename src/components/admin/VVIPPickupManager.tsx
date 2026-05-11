@@ -322,7 +322,7 @@ export function VVIPPickupManager() {
                       />
                     </td>
                     <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
-                      <VStack gap="1">
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                         {hasChanges && (
                           <button
                             onClick={() => saveRow(row.id)}
@@ -356,7 +356,7 @@ export function VVIPPickupManager() {
                         >
                           {row.confirmation_sent ? "✓ Sent" : "Send Confirmation"}
                         </button>
-                      </VStack>
+                      </div>
                     </td>
                   </tr>
                 )
