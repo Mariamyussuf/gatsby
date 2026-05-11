@@ -1,301 +1,171 @@
-import { useState, useEffect } from "react"
-import {
-  Box,
-  Text,
-  Input,
-  Button,
-  Badge,
-  HStack,
-  VStack,
-} from "@chakra-ui/react"
-import { supabase } from "@/lib/supabase"
-import { COLORS } from "@/config/constants"
-import Papa from "papaparse"
+"use client"
 
-type TransactionRow = {
+import { useEffect, useState } from "react"
+import { Box, VStack, HStack, Heading, Text, Input, Button, Spinner, Table } from "@chakra-ui/react"
+import { COLORS } from "@/config/constants"
+import { supabase } from "@/lib/supabase"
+
+interface Transaction {
   id: string
   reference: string
-  squad_reference: string | null
-  primary_email: string
   primary_first_name: string
   primary_last_name: string
+  primary_email: string
   quantity: number
   total_kobo: number
   payment_status: string
   created_at: string
   confirmed_at: string | null
-  group_booking_code: string
 }
 
 export function TransactionsList() {
-  const [transactions, setTransactions] = useState<TransactionRow[]>([])
-  const [search, setSearch] = useState("")
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "confirmed">("all")
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [filtered, setFiltered] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
-
-  const fetchData = async () => {
-    const { data } = await supabase
-      .from("transactions")
-      .select(`
-        id,
-        reference,
-        squad_reference,
-        primary_email,
-        primary_first_name,
-        primary_last_name,
-        quantity,
-        total_kobo,
-        payment_status,
-        created_at,
-        confirmed_at,
-        group_booking_code
-      `)
-      .order("created_at", { ascending: false })
-
-    if (data) {
-      setTransactions(data as TransactionRow[])
-    }
-    setLoading(false)
-  }
+  const [searchRef, setSearchRef] = useState("")
 
   useEffect(() => {
-    fetchData()
-    const ch = supabase
-      .channel("admin-transactions")
-      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, fetchData)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
+    fetchTransactions()
   }, [])
 
-  const filtered = transactions.filter((t) => {
-    if (filterStatus !== "all" && t.payment_status !== filterStatus) return false
-    const q = search.toLowerCase()
+  useEffect(() => {
+    if (searchRef.trim()) {
+      setFiltered(
+        transactions.filter(
+          (t) =>
+            t.reference.toLowerCase().includes(searchRef.toLowerCase()) ||
+            t.primary_email.toLowerCase().includes(searchRef.toLowerCase()) ||
+            t.primary_first_name.toLowerCase().includes(searchRef.toLowerCase())
+        )
+      )
+    } else {
+      setFiltered(transactions)
+    }
+  }, [searchRef, transactions])
+
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, reference, primary_first_name, primary_last_name, primary_email, quantity, total_kobo, payment_status, created_at, confirmed_at")
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("[v0] Error fetching transactions:", error)
+      } else if (data) {
+        setTransactions(data)
+      }
+    } catch (err) {
+      console.error("[v0] Error in TransactionsList:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "—"
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  }
+
+  if (loading) {
     return (
-      t.primary_email.toLowerCase().includes(q) ||
-      t.primary_first_name.toLowerCase().includes(q) ||
-      t.primary_last_name.toLowerCase().includes(q) ||
-      t.reference.toLowerCase().includes(q) ||
-      t.group_booking_code.toLowerCase().includes(q)
+      <VStack justify="center" align="center" minH="300px">
+        <Spinner color={COLORS.GOLD_BASE} size="lg" />
+        <Text color={COLORS.TEXT}>Loading transactions...</Text>
+      </VStack>
     )
-  })
-
-  const exportCsv = () => {
-    const csv = Papa.unparse(
-      filtered.map((t) => ({
-        "Group Code": t.group_booking_code,
-        "Reference": t.reference,
-        "Squad Reference": t.squad_reference || "—",
-        "Primary Name": `${t.primary_first_name} ${t.primary_last_name}`,
-        "Email": t.primary_email,
-        "Quantity": t.quantity,
-        "Total": `NGN ${(t.total_kobo / 100).toLocaleString()}`,
-        "Status": t.payment_status,
-        "Booked At": new Date(t.created_at).toLocaleString(),
-        "Confirmed At": t.confirmed_at ? new Date(t.confirmed_at).toLocaleString() : "—",
-      }))
-    )
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `busa-gala-transactions-${Date.now()}.csv`
-    a.click()
   }
-
-  const thStyle = {
-    fontFamily: "'Josefin Sans', sans-serif",
-    fontSize: "0.55rem",
-    letterSpacing: "0.2em",
-    color: COLORS.GOLD_DIM,
-    textTransform: "uppercase" as const,
-    padding: "8px 12px",
-    borderBottom: `1px solid ${COLORS.GOLD_DIM}30`,
-    whiteSpace: "nowrap" as const,
-  }
-
-  const tdStyle = {
-    fontFamily: "'Josefin Sans', sans-serif",
-    fontSize: "0.65rem",
-    color: COLORS.GOLD_BASE,
-    padding: "8px 12px",
-    borderBottom: `1px solid ${COLORS.GOLD_DIM}15`,
-    whiteSpace: "nowrap" as const,
-  }
-
-  const pendingCount = transactions.filter((t) => t.payment_status === "pending").length
-  const confirmedCount = transactions.filter((t) => t.payment_status === "confirmed").length
 
   return (
-    <VStack gap="4" align="stretch">
-      {/* Stats */}
-      <HStack gap="4">
-        <Box p="3" style={{ border: `1px solid ${COLORS.GOLD_DIM}40`, background: `${COLORS.PANEL_MID}40` }}>
-          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>
-            All Transactions
-          </Text>
-          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT }}>
-            {transactions.length}
-          </Text>
-        </Box>
-        <Box p="3" style={{ border: `1px solid ${COLORS.GOLD_DIM}40`, background: `${COLORS.PANEL_MID}40` }}>
-          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>
-            Confirmed
-          </Text>
-          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: "#22c55e" }}>
-            {confirmedCount}
-          </Text>
-        </Box>
-        <Box p="3" style={{ border: `1px solid ${COLORS.GOLD_DIM}40`, background: `${COLORS.PANEL_MID}40` }}>
-          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>
-            Pending / Abandoned
-          </Text>
-          <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", fontWeight: "700", color: "#F97316" }}>
-            {pendingCount}
-          </Text>
-        </Box>
+    <VStack spacing={6} align="stretch">
+      <HStack>
+        <Heading size="lg" color={COLORS.GOLD_BASE}>
+          Transactions
+        </Heading>
+        <Text color={COLORS.TEXT_MUTED} fontSize="sm">
+          ({filtered.length} total)
+        </Text>
       </HStack>
 
-      {/* Filters */}
-      <HStack gap="4">
-        <Input
-          placeholder="Search by email, name, reference..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          flex="1"
-          style={{
-            background: `${COLORS.PANEL_MID}60`,
-            border: `1px solid ${COLORS.GOLD_DIM}40`,
-            color: COLORS.GOLD_BASE,
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: "0.75rem",
-          }}
-        />
-        <HStack gap="2">
-          {(["all", "confirmed", "pending"] as const).map((status) => (
-            <Button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              style={{
-                background: filterStatus === status ? COLORS.GOLD_BASE : "transparent",
-                color: filterStatus === status ? COLORS.BG : COLORS.GOLD_BASE,
-                border: `1px solid ${COLORS.GOLD_DIM}60`,
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.6rem",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                padding: "6px 12px",
-              }}
-            >
-              {status}
-            </Button>
-          ))}
-        </HStack>
-        <Button
-          onClick={exportCsv}
-          style={{
-            background: "transparent",
-            border: `1px solid ${COLORS.GOLD_DIM}60`,
-            color: COLORS.GOLD_BASE,
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: "0.6rem",
-            letterSpacing: "0.15em",
-            cursor: "pointer",
-            height: "40px",
-            padding: "0 16px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Export CSV
-        </Button>
-      </HStack>
+      <Input
+        placeholder="Search by reference, email, or name..."
+        value={searchRef}
+        onChange={(e) => setSearchRef(e.target.value)}
+        bg={COLORS.INPUT_BG}
+        color={COLORS.TEXT}
+        borderColor={COLORS.ACCENT}
+        _placeholder={{ color: COLORS.TEXT_MUTED }}
+      />
 
-      <Text
-        style={{
-          fontFamily: "'Josefin Sans', sans-serif",
-          fontSize: "0.6rem",
-          color: COLORS.GOLD_DIM,
-          letterSpacing: "0.1em",
-        }}
-      >
-        {filtered.length} transaction{filtered.length !== 1 ? "s" : ""} found
-      </Text>
-
-      {/* Table */}
-      <Box overflowX="auto">
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              {["Group Code", "Reference", "Name", "Email", "Qty", "Amount", "Status", "Confirmed"].map((h) => (
-                <th key={h} style={thStyle}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px" }}>
-                  Loading...
-                </td>
-              </tr>
-            ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: "center", padding: "20px", opacity: 0.5 }}>
-                  No transactions found
-                </td>
-              </tr>
-            ) : (
-              filtered.map((t) => (
-                <tr
-                  key={t.id}
-                  style={{ transition: "background 0.2s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = `${COLORS.GOLD_GLOW}08` }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
-                >
-                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>
-                    {t.group_booking_code}
-                  </td>
-                  <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.6rem" }}>
-                    {t.reference.substring(0, 12)}…
-                  </td>
-                  <td style={tdStyle}>
-                    {t.primary_first_name} {t.primary_last_name}
-                  </td>
-                  <td style={tdStyle}>{t.primary_email}</td>
-                  <td style={tdStyle}>{t.quantity}</td>
-                  <td style={tdStyle}>NGN {(t.total_kobo / 100).toLocaleString()}</td>
-                  <td style={tdStyle}>
-                    <Badge
-                      style={{
-                        background: t.payment_status === "confirmed" ? "#22c55e20" : "#F9731620",
-                        color: t.payment_status === "confirmed" ? "#22c55e" : "#F97316",
-                        fontSize: "0.5rem",
-                        fontFamily: "'Josefin Sans', sans-serif",
-                        border: `1px solid ${t.payment_status === "confirmed" ? "#22c55e40" : "#F9731640"}`,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      {t.payment_status}
-                    </Badge>
-                  </td>
-                  <td style={tdStyle}>
-                    {t.confirmed_at
-                      ? new Date(t.confirmed_at).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                      : "—"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <Box overflowX="auto" borderRadius="md" borderColor={COLORS.ACCENT} borderWidth={1}>
+        <Table.Root size="sm">
+          <Table.Header bg={COLORS.PANEL_DARK}>
+            <Table.Row>
+              <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600">
+                Reference
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600">
+                Name
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600">
+                Email
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600" textAlign="center">
+                Qty
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600" textAlign="right">
+                Amount
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600">
+                Status
+              </Table.ColumnHeader>
+              <Table.ColumnHeader color={COLORS.GOLD_BASE} fontWeight="600">
+                Date
+              </Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {filtered.map((t) => (
+              <Table.Row key={t.id} _hover={{ bg: `${COLORS.GOLD_BASE}15` }}>
+                <Table.Cell color={COLORS.TEXT} fontWeight="500">
+                  {t.reference}
+                </Table.Cell>
+                <Table.Cell color={COLORS.TEXT}>
+                  {t.primary_first_name} {t.primary_last_name}
+                </Table.Cell>
+                <Table.Cell color={COLORS.TEXT_MUTED} fontSize="xs">
+                  {t.primary_email}
+                </Table.Cell>
+                <Table.Cell color={COLORS.TEXT} textAlign="center">
+                  {t.quantity}
+                </Table.Cell>
+                <Table.Cell color={COLORS.GOLD_BRIGHT} fontWeight="500" textAlign="right">
+                  NGN {(t.total_kobo / 100).toLocaleString()}
+                </Table.Cell>
+                <Table.Cell>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="600"
+                    color={t.payment_status === "confirmed" ? "#10b981" : "#f59e0b"}
+                    textTransform="uppercase"
+                  >
+                    {t.payment_status}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell color={COLORS.TEXT_MUTED} fontSize="sm">
+                  {formatDate(t.created_at)}
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
       </Box>
+
+      {filtered.length === 0 && (
+        <Text color={COLORS.TEXT_MUTED} textAlign="center" py={8}>
+          No transactions found
+        </Text>
+      )}
     </VStack>
   )
 }
