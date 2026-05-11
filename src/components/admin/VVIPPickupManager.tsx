@@ -35,58 +35,59 @@ export function VVIPPickupManager() {
   const [editing, setEditing] = useState<Record<string, Partial<VvipRow>>>({})
 
   const fetchData = async () => {
-    // First, fetch all VVIP ticket buyers (tier_id = VVIP tier ID)
-    const { data: vvipTier } = await supabase
-      .from("ticket_tiers")
-      .select("id")
-      .eq("name", "VVIP")
-      .single()
+    try {
+      // First, fetch all VVIP ticket buyers (tier_id = VVIP tier ID)
+      const { data: vvipTier, error: tierError } = await supabase
+        .from("ticket_tiers")
+        .select("id")
+        .eq("name", "VVIP")
+        .maybeSingle()
 
-    if (!vvipTier) {
-      setLoading(false)
-      return
-    }
+      if (tierError || !vvipTier) {
+        console.warn("[v0] VVIP tier not found, showing all vvip_pickups")
+        // Continue without filtering by tier - just show all existing pickups
+      } else {
+        // Get all attendees with VVIP tickets
+        const { data: vvipAttendees } = await supabase
+          .from("attendees")
+          .select("id, first_name, last_name, email, ticket_id, table_number, transactions (primary_phone)")
+          .eq("tier_id", vvipTier.id)
 
-    // Get all attendees with VVIP tickets
-    const { data: vvipAttendees } = await supabase
-      .from("attendees")
-      .select("id, first_name, last_name, email, ticket_id, table_number, transactions (primary_phone)")
-      .eq("tier_id", vvipTier.id)
+        // Auto-create vvip_pickups entries for VVIP ticket buyers who don't have one yet
+        if (vvipAttendees && vvipAttendees.length > 0) {
+          for (const attendee of vvipAttendees) {
+            const { data: existing } = await supabase
+              .from("vvip_pickups")
+              .select("id")
+              .eq("attendee_id", attendee.id)
+              .maybeSingle()
 
-    // Auto-create vvip_pickups entries for VVIP ticket buyers who don't have one yet
-    if (vvipAttendees) {
-      for (const attendee of vvipAttendees) {
-        const { data: existing } = await supabase
-          .from("vvip_pickups")
-          .select("id")
-          .eq("attendee_id", attendee.id)
-          .single()
-
-        if (!existing) {
-          // Auto-create entry for this VVIP attendee
-          await supabase.from("vvip_pickups").insert({
-            attendee_id: attendee.id,
-          })
+            if (!existing) {
+              // Auto-create entry for this VVIP attendee
+              await supabase.from("vvip_pickups").insert({
+                attendee_id: attendee.id,
+              })
+            }
+          }
         }
       }
-    }
 
-    // Now fetch all vvip_pickups with attendee details
-    const { data } = await supabase
-      .from("vvip_pickups")
-      .select("*, attendees (first_name, last_name, email, ticket_id, table_number, transactions (primary_phone))")
-      .order("updated_at", { ascending: true })
+      // Now fetch all vvip_pickups with attendee details
+      const { data } = await supabase
+        .from("vvip_pickups")
+        .select("*, attendees (first_name, last_name, email, ticket_id, table_number, transactions (primary_phone))")
+        .order("updated_at", { ascending: true })
 
-    if (data) {
-      setRows(
-        data.map((r: any) => {
-          const attendee = r.attendees ?? {}
+      if (data) {
+        setRows(
+          data.map((r: any) => {
+            const attendee = r.attendees ?? {}
 
-          // FIX: attendees.transactions is a joined relation — Supabase returns
-          // it as an array even for to-one relations. Safely extract primary_phone.
-          const txnRaw = attendee.transactions
-          const phone: string | undefined = Array.isArray(txnRaw)
-            ? (txnRaw[0]?.primary_phone ?? undefined)
+            // FIX: attendees.transactions is a joined relation — Supabase returns
+            // it as an array even for to-one relations. Safely extract primary_phone.
+            const txnRaw = attendee.transactions
+            const phone: string | undefined = Array.isArray(txnRaw)
+              ? (txnRaw[0]?.primary_phone ?? undefined)
             : ((txnRaw as { primary_phone?: string } | null)?.primary_phone ?? undefined)
 
           return {
@@ -100,8 +101,12 @@ export function VVIPPickupManager() {
           }
         })
       )
+      }
+      setLoading(false)
+    } catch (err) {
+      console.error("[v0] Error in VVIPPickupManager:", err)
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {
