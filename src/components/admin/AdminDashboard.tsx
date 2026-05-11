@@ -166,13 +166,13 @@ export function AdminDashboard() {
             { value: "scanner",       label: "QR Scanner" },
             { value: "vvip",          label: "VVIP Pickups" },
           ].map(({ value, label }) => (
-            <Tabs.Trigger key={value} value={value} style={tabStyle} _selected={{ color: COLORS.GOLD_BRIGHT, borderBottom: `2px solid ${COLORS.GOLD_BASE}` }}>
+            <Tabs.Trigger key={value} value={value} style={TAB_TRIGGER_STYLE} _selected={{ color: COLORS.GOLD_BRIGHT, borderBottom: `2px solid ${COLORS.GOLD_BASE}` }}>
               {label}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
         
-        <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
+        <Tabs.Content value="overview"><Text>Dashboard Overview</Text></Tabs.Content>
         <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
         <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>
