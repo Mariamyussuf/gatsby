@@ -11,6 +11,20 @@ interface Stat {
   sub?: string
 }
 
+/** Row shape from `transactions` + embedded `ticket_tiers` (FK tier_id). */
+interface ConfirmedTxnRow {
+  quantity: number | null
+  total_kobo: number | null
+  ticket_tiers: { name: string } | { name: string }[] | null
+}
+
+function tierNameFromTxn(t: ConfirmedTxnRow): string {
+  const rel = t.ticket_tiers
+  if (!rel) return "Unknown"
+  if (Array.isArray(rel)) return String(rel[0]?.name ?? "Unknown")
+  return String(rel.name ?? "Unknown")
+}
+
 export function StatsOverview() {
   const [stats, setStats] = useState<Stat[]>([])
   const [loading, setLoading] = useState(true)
@@ -24,7 +38,7 @@ export function StatsOverview() {
       // Fetch confirmed transactions
       const { data: txns, error } = await supabase
         .from("transactions")
-        .select("quantity, total_kobo, tier_name")
+        .select("quantity, total_kobo, ticket_tiers(name)")
         .eq("payment_status", "confirmed")
 
       if (error) {
@@ -48,8 +62,8 @@ export function StatsOverview() {
 
       // Calculate by tier
       const tierMap: Record<string, { count: number; revenue: number }> = {}
-      for (const t of txns) {
-        const tierName = t.tier_name || "Unknown"
+      for (const t of txns as ConfirmedTxnRow[]) {
+        const tierName = tierNameFromTxn(t)
         if (!tierMap[tierName]) {
           tierMap[tierName] = { count: 0, revenue: 0 }
         }

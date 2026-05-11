@@ -25,6 +25,7 @@ export function VVIPPickupManager() {
   const [filtered, setFiltered] = useState<VVIPAttendee[]>([])
   const [loading, setLoading] = useState(true)
   const [showPickedUp, setShowPickedUp] = useState(false)
+  const [tierMissing, setTierMissing] = useState(false)
 
   useEffect(() => {
     fetchVVIPAttendees()
@@ -40,18 +41,26 @@ export function VVIPPickupManager() {
 
   const fetchVVIPAttendees = async () => {
     try {
-      // Fetch VVIP tier
-      const { data: tierData } = await supabase
+      // Match tier case-insensitively (schema seed uses "VVIP"; remote DB may differ)
+      const { data: tierList } = await supabase
         .from("ticket_tiers")
-        .select("id")
-        .eq("name", "VVIP")
-        .maybeSingle()
+        .select("id, name")
+        .ilike("name", "vvip")
+        .limit(10)
 
-      if (!tierData) {
-        console.warn("[v0] VVIP tier not found")
+      const tierData =
+        tierList?.find((t) => t.name === "VVIP") ??
+        tierList?.find((t) => t.name.replace(/\s+/g, "").toLowerCase() === "vvip") ??
+        tierList?.[0]
+
+      if (!tierData?.id) {
+        console.warn("[v0] VVIP tier not found — no `ticket_tiers` row matches name ILIKE 'vvip'")
+        setTierMissing(true)
+        setAttendees([])
         setLoading(false)
         return
       }
+      setTierMissing(false)
 
       // Fetch VVIP attendees with pickup info
       const { data, error } = await supabase
@@ -139,6 +148,14 @@ export function VVIPPickupManager() {
 
   return (
     <VStack spacing={6} align="stretch">
+      {tierMissing && (
+        <Box p={4} borderRadius="md" borderWidth={1} borderColor={COLORS.GOLD_DIM} bg={`${COLORS.PANEL_MID}80`}>
+          <Text color={COLORS.TEXT} fontSize="sm">
+            No VVIP tier found in <code>ticket_tiers</code> (expected a row whose name matches{" "}
+            <code>VVIP</code> case-insensitively). Seed or rename the tier in Supabase, then refresh.
+          </Text>
+        </Box>
+      )}
       <HStack justify="space-between">
         <Heading size="lg" color={COLORS.GOLD_BASE}>
           VVIP Ticket Pickups
