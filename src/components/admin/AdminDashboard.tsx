@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Box, VStack, HStack, Heading, Tabs, Text } from "@chakra-ui/react"
+import { Box, VStack, Heading, Tabs } from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
 import { TableMap } from "./TableMap"
 import { StatsOverview } from "./StatsOverview"
@@ -35,7 +35,7 @@ export function AdminDashboard() {
           Admin Dashboard
         </Heading>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs.Root value={activeTab} onValueChange={(e) => setActiveTab(e.value)}>
           <Tabs.List borderBottom={`2px solid ${COLORS.GOLD_BASE}`} mb={6}>
             {tabs.map(({ value, label }) => (
               <Tabs.Trigger
@@ -89,7 +89,7 @@ export function AdminDashboard() {
           <Tabs.Content value="scanner">
             <QRScanner />
           </Tabs.Content>
-        </Tabs>
+        </Tabs.Root>
       </VStack>
     </Box>
   )
