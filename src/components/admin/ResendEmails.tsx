@@ -88,7 +88,8 @@ export function ResendEmails() {
         <Text fontSize="lg" fontWeight="600" color={COLORS.GOLD_BASE} mb={4}>
           Resend Confirmation Emails
         </Text>
-        <Text fontSize="sm" color={COLORS.TEXT_MUTED} mb={4}>
+        {/* FIX: COLORS.TEXT_MUTED does not exist → replaced with COLORS.GOLD_DIM */}
+        <Text fontSize="sm" color={COLORS.GOLD_DIM} mb={4}>
           Find attendees by group code and resend their confirmation emails with tickets.
         </Text>
 
@@ -128,10 +129,10 @@ export function ResendEmails() {
                     <Text fontSize="sm" color={COLORS.TEXT}>
                       {att.first_name} {att.last_name}
                     </Text>
-                    <Text fontSize="xs" color={COLORS.TEXT_MUTED}>
+                    {/* FIX: COLORS.TEXT_MUTED does not exist → replaced with COLORS.GOLD_DIM */}
+                    <Text fontSize="xs" color={COLORS.GOLD_DIM}>
                       {att.email}
                     </Text>
-                    {/* ✅ Fixed: "yellow" is a valid Chakra colorScheme, closest to gold */}
                     <Badge colorScheme="yellow">{att.ticket_id}</Badge>
                   </HStack>
                 ))}
@@ -148,7 +149,6 @@ export function ResendEmails() {
                 _hover={{ opacity: 0.9 }}
               >
                 {isSending ? (
-                  // ✅ Fixed: use HStack to space Spinner and text, not mr prop on Spinner
                   <HStack spacing={2}>
                     <Spinner size="sm" />
                     <Text>Sending...</Text>

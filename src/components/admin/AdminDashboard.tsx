@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react"
-import { Box, Text, VStack, HStack, Tabs, SimpleGrid, Button } from "@chakra-ui/react"
+import { Box, VStack, HStack, Text, Button, SimpleGrid } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
-import { TableMap } from "./TableMap"
 import { AttendeeList } from "./AttendeeList"
 import { TransactionsList } from "./TransactionsList"
 import { AwardsNominationsList } from "./AwardsNominationsList"
@@ -11,6 +10,7 @@ import { ManualConfirmation } from "./ManualConfirmation"
 import { QRScanner } from "./QRScanner"
 import { VVIPPickupManager } from "./VVIPPickupManager"
 import { WaitlistAdmin } from "./WaitlistAdmin"
+import { Tabs } from "@chakra-ui/react"
 
 type Stats = {
   totalSold: number
@@ -18,46 +18,8 @@ type Stats = {
   byTier: { name: string; count: number; revenue: number }[]
 }
 
-export function AdminDashboard() {
-  const [stats, setStats] = useState<Stats>({ totalSold: 0, totalRevenue: 0, byTier: [] })
-
-  const fetchStats = async () => {
-    // ✅ Don't join ticket_tiers — just count rows for totalSold
-    const { data: attendees } = await supabase
-      .from("attendees")
-      .select("id")
-
-    // ✅ Join tier_name directly from transactions (no nested relation needed)
-    const { data: txns } = await supabase
-      .from("transactions")
-      .select("total_kobo, quantity, tier_name")
-      .eq("payment_status", "confirmed")
-
-    if (attendees && txns) {
-      // Count total tickets sold by summing quantity from transactions
-      const totalSold = txns.reduce((s: number, t: any) => s + (t.quantity ?? 0), 0)
-      const totalRevenue = txns.reduce((s: number, t: any) => s + (t.total_kobo ?? 0), 0) / 100
-
-      const tierMap: Record<string, { count: number; revenue: number; name: string }> = {}
-      for (const t of txns) {
-        // ✅ Use tier_name (scalar string) directly from transactions table
-        const tName = (t.tier_name as string) || "Unknown"
-        if (!tierMap[tName]) tierMap[tName] = { count: 0, revenue: 0, name: tName }
-        tierMap[tName].count += t.quantity ?? 0
-        tierMap[tName].revenue += (t.total_kobo ?? 0) / 100
-      }
-
-      setStats({ totalSold, totalRevenue, byTier: Object.values(tierMap) })
-    }
-  }
-
-  useEffect(() => {
-    fetchStats()
-    const interval = setInterval(fetchStats, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const StatCard = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
     <Box
       p="6"
       style={{
@@ -78,16 +40,74 @@ export function AdminDashboard() {
       )}
     </Box>
   )
+}
 
-  const tabStyle = {
-    fontFamily: "'Josefin Sans', sans-serif",
-    fontSize: "0.6rem",
-    letterSpacing: "0.2em",
-    textTransform: "uppercase" as const,
-    color: COLORS.GOLD_DIM,
-    cursor: "pointer",
-    padding: "10px 16px",
+const TAB_TRIGGER_STYLE: React.CSSProperties = {
+  fontFamily: "'Josefin Sans', sans-serif",
+  fontSize: "0.6rem",
+  letterSpacing: "0.2em",
+  textTransform: "uppercase",
+  color: COLORS.GOLD_DIM,
+  cursor: "pointer",
+  padding: "10px 16px",
+  background: "transparent",
+  border: "none",
+  borderBottom: "2px solid transparent",
+}
+
+const TABS = [
+  { value: "locks",        label: "Table Locks" },
+  { value: "transactions", label: "Transactions" },
+  { value: "attendees",    label: "Attendees" },
+  { value: "awards",       label: "Awards" },
+  { value: "recovery",     label: "Recovery" },
+  { value: "waitlist",     label: "Waitlist" },
+  { value: "scanner",      label: "QR Scanner" },
+  { value: "vvip",         label: "VVIP Pickups" },
+]
+
+export function AdminDashboard() {
+  const [stats, setStats] = useState<Stats>({ totalSold: 0, totalRevenue: 0, byTier: [] })
+
+  const fetchStats = async () => {
+    const { data: attendees } = await supabase
+      .from("attendees")
+      .select("id")
+
+    const { data: txns } = await supabase
+      .from("transactions")
+      .select("total_kobo, quantity, ticket_tiers (name)")
+      .eq("payment_status", "confirmed")
+
+    if (attendees && txns) {
+      // Count total tickets sold by summing quantity from transactions
+      const totalSold = txns.reduce((s: number, t: any) => s + (t.quantity ?? 0), 0)
+      const totalRevenue = txns.reduce((s: number, t: any) => s + (t.total_kobo ?? 0), 0) / 100
+
+      const tierMap: Record<string, { count: number; revenue: number; name: string }> = {}
+      for (const t of txns) {
+        // FIX: Supabase joined relations return an array, not a plain object.
+        // ticket_tiers could be { name: string } | { name: string }[] | null
+        const tierRaw = t.ticket_tiers
+        const tName: string =
+          Array.isArray(tierRaw)
+            ? (tierRaw[0]?.name ?? "Unknown")
+            : ((tierRaw as { name?: string } | null)?.name ?? "Unknown")
+
+        if (!tierMap[tName]) tierMap[tName] = { count: 0, revenue: 0, name: tName }
+        tierMap[tName].count += t.quantity ?? 0
+        tierMap[tName].revenue += (t.total_kobo ?? 0) / 100
+      }
+
+      setStats({ totalSold, totalRevenue, byTier: Object.values(tierMap) })
+    }
   }
+
+  useEffect(() => {
+    fetchStats()
+    const interval = setInterval(fetchStats, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <Box minH="100vh" style={{ backgroundColor: COLORS.BG }} px={{ base: "4", md: "8" }} py="8">
@@ -151,8 +171,8 @@ export function AdminDashboard() {
             </Tabs.Trigger>
           ))}
         </Tabs.List>
-
-        <Tabs.Content value="overview"><TableMap /></Tabs.Content>
+        
+        <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
         <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>

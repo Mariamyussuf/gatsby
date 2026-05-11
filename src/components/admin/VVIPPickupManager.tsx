@@ -79,15 +79,26 @@ export function VVIPPickupManager() {
 
     if (data) {
       setRows(
-        data.map((r: any) => ({
-          ...r,
-          first_name: r.attendees?.first_name,
-          last_name: r.attendees?.last_name,
-          email: r.attendees?.email,
-          phone: r.attendees?.transactions?.primary_phone,
-          ticket_id: r.attendees?.ticket_id,
-          table_number: r.attendees?.table_number,
-        }))
+        data.map((r: any) => {
+          const attendee = r.attendees ?? {}
+
+          // FIX: attendees.transactions is a joined relation — Supabase returns
+          // it as an array even for to-one relations. Safely extract primary_phone.
+          const txnRaw = attendee.transactions
+          const phone: string | undefined = Array.isArray(txnRaw)
+            ? (txnRaw[0]?.primary_phone ?? undefined)
+            : ((txnRaw as { primary_phone?: string } | null)?.primary_phone ?? undefined)
+
+          return {
+            ...r,
+            first_name: attendee.first_name,
+            last_name: attendee.last_name,
+            email: attendee.email,
+            phone,
+            ticket_id: attendee.ticket_id,
+            table_number: attendee.table_number,
+          }
+        })
       )
     }
     setLoading(false)
@@ -117,7 +128,6 @@ export function VVIPPickupManager() {
   }
 
   const sendConfirmation = async (row: VvipRow) => {
-    // 👉 Resend email trigger here — send pickup confirmation
     await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-pickup-confirmation`, {
       method: "POST",
       headers: {
@@ -135,15 +145,15 @@ export function VVIPPickupManager() {
   const exportCsv = () => {
     const csv = Papa.unparse(
       rows.map((r) => ({
-        Name: `${r.first_name} ${r.last_name}`,
-        Email: r.email,
-        Phone: r.phone,
-        "Ticket ID": r.ticket_id,
-        "Table #": r.table_number,
-        "Pickup Address": r.pickup_address || "",
-        "Pickup Time": r.pickup_time || "",
+        Name: `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim(),
+        Email: r.email ?? "",
+        Phone: r.phone ?? "",
+        "Ticket ID": r.ticket_id ?? "",
+        "Table #": r.table_number ?? "",
+        "Pickup Address": r.pickup_address ?? "",
+        "Pickup Time": r.pickup_time ?? "",
         "Pickup Status": r.pickup_status,
-        Notes: r.notes || "",
+        Notes: r.notes ?? "",
         "Confirmation Sent": r.confirmation_sent ? "Yes" : "No",
       }))
     )
@@ -238,10 +248,10 @@ export function VVIPPickupManager() {
             ) : (
               rows.map((row) => {
                 const draft = editing[row.id] || {}
-                const address = draft.pickup_address !== undefined ? draft.pickup_address : (row.pickup_address || "")
-                const time = draft.pickup_time !== undefined ? draft.pickup_time : (row.pickup_time || "")
+                const address = draft.pickup_address !== undefined ? draft.pickup_address : (row.pickup_address ?? "")
+                const time = draft.pickup_time !== undefined ? draft.pickup_time : (row.pickup_time ?? "")
                 const status = draft.pickup_status !== undefined ? draft.pickup_status : row.pickup_status
-                const notes = draft.notes !== undefined ? draft.notes : (row.notes || "")
+                const notes = draft.notes !== undefined ? draft.notes : (row.notes ?? "")
                 const hasChanges = !!editing[row.id]
 
                 return (
@@ -252,23 +262,23 @@ export function VVIPPickupManager() {
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
                   >
                     <td style={{ ...tdStyle, fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.65rem", color: COLORS.GOLD_BASE, whiteSpace: "nowrap" }}>
-                      {row.first_name} {row.last_name}
+                      {String(row.first_name ?? "")} {String(row.last_name ?? "")}
                     </td>
                     <td style={{ ...tdStyle, fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: COLORS.GOLD_DIM }}>
-                      {row.email}
+                      {String(row.email ?? "—")}
                     </td>
                     <td style={{ ...tdStyle, fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: COLORS.GOLD_DIM, whiteSpace: "nowrap" }}>
-                      {row.phone || "—"}
+                      {String(row.phone ?? "—")}
                     </td>
                     <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.55rem", color: COLORS.GOLD_DIM }}>
-                      {row.ticket_id}
+                      {String(row.ticket_id ?? "—")}
                     </td>
                     <td style={{ ...tdStyle, fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.65rem", color: COLORS.GOLD_BASE, textAlign: "center" }}>
-                      {row.table_number}
+                      {row.table_number != null ? String(row.table_number) : "—"}
                     </td>
                     <td style={{ ...tdStyle, minWidth: "180px" }}>
                       <input
-                        value={address}
+                        value={address ?? ""}
                         onChange={(e) => setEdit(row.id, "pickup_address", e.target.value)}
                         placeholder="Enter pickup address..."
                         style={inputStyle}
@@ -276,7 +286,7 @@ export function VVIPPickupManager() {
                     </td>
                     <td style={{ ...tdStyle, minWidth: "120px" }}>
                       <input
-                        value={time}
+                        value={time ?? ""}
                         onChange={(e) => setEdit(row.id, "pickup_time", e.target.value)}
                         placeholder="e.g. 6:00 PM"
                         style={inputStyle}
@@ -300,7 +310,7 @@ export function VVIPPickupManager() {
                     </td>
                     <td style={{ ...tdStyle, minWidth: "150px" }}>
                       <input
-                        value={notes}
+                        value={notes ?? ""}
                         onChange={(e) => setEdit(row.id, "notes", e.target.value)}
                         placeholder="Notes..."
                         style={inputStyle}

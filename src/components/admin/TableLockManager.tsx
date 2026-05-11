@@ -21,6 +21,7 @@ export function TableLockManager() {
   const [selectedTier, setSelectedTier] = useState("")
   const [tiers, setTiers] = useState<{ id: string; name: string }[]>([])
   const [searchTable, setSearchTable] = useState("")
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   useEffect(() => {
     loadTiers()
@@ -41,22 +42,34 @@ export function TableLockManager() {
     const { data, error } = await supabase
       .from("gala_tables")
       .select(`
-        id, tier_id, table_number, seats_total, seats_booked,
+        id, tier_id, table_number, seats_total, seats_booked, is_locked,
         ticket_tiers (name)
       `)
       .order("table_number")
 
     if (!error && data) {
-      const formatted = data.map((t: any) => ({
-        id: t.id,
-        tier_id: t.tier_id,
-        table_number: t.table_number,
-        seats_total: t.seats_total,
-        seats_booked: t.seats_booked,
-        is_locked: false,
-        tier_name: t.ticket_tiers?.name || "Unknown",
-      }))
+      const formatted: GalaTable[] = data.map((t: any) => {
+        // FIX: Supabase joined relations return an array or object depending on
+        // whether it's a to-many or to-one relation. Safely handle both.
+        const tierRaw = t.ticket_tiers
+        const tierName: string =
+          Array.isArray(tierRaw)
+            ? (tierRaw[0]?.name ?? "Unknown")
+            : ((tierRaw as { name?: string } | null)?.name ?? "Unknown")
+
+        return {
+          id: t.id,
+          tier_id: t.tier_id,
+          table_number: t.table_number,
+          seats_total: t.seats_total,
+          seats_booked: t.seats_booked,
+          is_locked: t.is_locked ?? false,
+          tier_name: tierName,
+        }
+      })
       setTables(formatted)
+    } else if (error) {
+      toaster.create({ title: "Failed to load tables", type: "error" })
     }
     setIsLoading(false)
   }
@@ -75,21 +88,26 @@ export function TableLockManager() {
   }
 
   const toggleLock = async (table: GalaTable) => {
+    setTogglingId(table.id)
+    const newLocked = !table.is_locked
     const { error } = await supabase
       .from("gala_tables")
-      .update({ is_locked: !table.is_locked })
+      .update({ is_locked: newLocked })
       .eq("id", table.id)
 
     if (!error) {
+      setTables((prev) =>
+        prev.map((t) => (t.id === table.id ? { ...t, is_locked: newLocked } : t))
+      )
       toaster.create({
-        title: table.is_locked ? "Table unlocked" : "Table locked",
-        description: `Table ${table.table_number} is now ${table.is_locked ? "available" : "unavailable"}`,
+        title: newLocked ? "Table locked" : "Table unlocked",
+        description: `Table ${table.table_number} is now ${newLocked ? "unavailable" : "available"}`,
         type: "success",
       })
-      loadTables()
     } else {
       toaster.create({ title: "Error updating table", type: "error" })
     }
+    setTogglingId(null)
   }
 
   if (isLoading) {
@@ -115,17 +133,17 @@ export function TableLockManager() {
           placeholder="Search table number..."
           value={searchTable}
           onChange={(e) => setSearchTable(e.target.value)}
-          bg={COLORS.INPUT_BG}
+          bg={COLORS.PANEL_MID}
           color={COLORS.TEXT}
-          borderColor={COLORS.ACCENT}
-          _placeholder={{ color: COLORS.TEXT_MUTED }}
+          borderColor={COLORS.GOLD_DIM}
+          _placeholder={{ color: COLORS.GOLD_DIM }}
         />
         <Select
           value={selectedTier}
           onChange={(e) => setSelectedTier(e.target.value)}
-          bg={COLORS.INPUT_BG}
+          bg={COLORS.PANEL_MID}
           color={COLORS.TEXT}
-          borderColor={COLORS.ACCENT}
+          borderColor={COLORS.GOLD_DIM}
         >
           <option value="">All Tiers</option>
           {tiers.map((tier) => (
@@ -142,7 +160,7 @@ export function TableLockManager() {
             key={table.id}
             p={4}
             bg={COLORS.PANEL_MID}
-            borderColor={COLORS.ACCENT}
+            borderColor={COLORS.GOLD_DIM}
             borderWidth={1}
             borderRadius="md"
           >
@@ -155,14 +173,15 @@ export function TableLockManager() {
               </Badge>
             </HStack>
             <Text color={COLORS.TEXT} fontSize="sm" mb={2}>
-              {table.tier_name}
+              {String(table.tier_name ?? "Unknown")}
             </Text>
-            <Text color={COLORS.TEXT_MUTED} fontSize="xs" mb={4}>
+            <Text color={COLORS.GOLD_DIM} fontSize="xs" mb={4}>
               Seats: {table.seats_booked}/{table.seats_total}
             </Text>
             <Button
               w="100%"
               onClick={() => toggleLock(table)}
+              isLoading={togglingId === table.id}
               colorScheme={table.is_locked ? "green" : "red"}
               size="sm"
             >
@@ -173,7 +192,7 @@ export function TableLockManager() {
       </SimpleGrid>
 
       {filteredTables.length === 0 && (
-        <Text color={COLORS.TEXT_MUTED} textAlign="center" py={8}>
+        <Text color={COLORS.GOLD_DIM} textAlign="center" py={8}>
           No tables found
         </Text>
       )}
