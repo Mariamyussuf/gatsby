@@ -34,7 +34,8 @@ export function AdminDashboard() {
       .eq("payment_status", "confirmed")
 
     if (attendees && txns) {
-      const totalSold = attendees.length
+      // Count total tickets sold by summing quantity from transactions
+      const totalSold = txns.reduce((s: number, t: any) => s + (t.quantity ?? 0), 0)
       const totalRevenue = txns.reduce((s: number, t: any) => s + (t.total_kobo ?? 0), 0) / 100
 
       const tierMap: Record<string, { count: number; revenue: number; name: string }> = {}
