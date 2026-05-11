@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react"
-import { Box, VStack, HStack, Heading, Text, Button, Badge, SimpleGrid, Input, Select, Spinner } from "@chakra-ui/react"
+import {
+  Box,
+  VStack,
+  HStack,
+  Heading,
+  Text,
+  Button,
+  Badge,
+  SimpleGrid,
+  Input,
+  NativeSelect,
+  Spinner,
+} from "@chakra-ui/react"
 import { COLORS } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
 import { toaster } from "@/components/ui/toaster"
@@ -138,20 +150,23 @@ export function TableLockManager() {
           borderColor={COLORS.GOLD_DIM}
           _placeholder={{ color: COLORS.GOLD_DIM }}
         />
-        <Select
-          value={selectedTier}
-          onChange={(e) => setSelectedTier(e.target.value)}
-          bg={COLORS.PANEL_MID}
-          color={COLORS.TEXT}
-          borderColor={COLORS.GOLD_DIM}
-        >
-          <option value="">All Tiers</option>
-          {tiers.map((tier) => (
-            <option key={tier.id} value={tier.id}>
-              {tier.name}
-            </option>
-          ))}
-        </Select>
+        <NativeSelect.Root minW="180px" maxW="280px">
+          <NativeSelect.Field
+            value={selectedTier}
+            onChange={(e) => setSelectedTier(e.target.value)}
+            bg={COLORS.PANEL_MID}
+            color={COLORS.TEXT}
+            borderColor={COLORS.GOLD_DIM}
+          >
+            <option value="">All Tiers</option>
+            {tiers.map((tier) => (
+              <option key={tier.id} value={tier.id}>
+                {tier.name}
+              </option>
+            ))}
+          </NativeSelect.Field>
+          <NativeSelect.Indicator />
+        </NativeSelect.Root>
       </HStack>
 
       <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>

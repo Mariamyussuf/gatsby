@@ -161,45 +161,49 @@ export function AwardsNominationsList() {
         >
           Categories
         </Text>
-        <ScrollArea style={{ width: "100%", overflow: "auto", paddingBottom: "8px" }}>
-          <HStack gap="2" wrap="wrap">
-            <Button
-              onClick={() => setSelectedCategory(null)}
-              variant={selectedCategory === null ? "solid" : "outline"}
-              size="sm"
-              style={{
-                background: selectedCategory === null ? COLORS.GOLD_BASE : "transparent",
-                border: `1px solid ${COLORS.GOLD_DIM}40`,
-                color: selectedCategory === null ? COLORS.BG : COLORS.GOLD_DIM,
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.6rem",
-                cursor: "pointer",
-              }}
-            >
-              All Categories
-            </Button>
-            {nominations.map((n) => (
-              <Button
-                key={n.category.id}
-                onClick={() => setSelectedCategory(n.category.id)}
-                variant={selectedCategory === n.category.id ? "solid" : "outline"}
-                size="sm"
-                style={{
-                  background: selectedCategory === n.category.id ? COLORS.GOLD_BASE : "transparent",
-                  border: `1px solid ${COLORS.GOLD_DIM}40`,
-                  color: selectedCategory === n.category.id ? COLORS.BG : COLORS.GOLD_DIM,
-                  fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: "0.6rem",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {/* FIX: Render name and count as explicit strings */}
-                {String(n.category.name)} ({String(n.count)})
-              </Button>
-            ))}
-          </HStack>
-        </ScrollArea>
+        <ScrollArea.Root width="100%" pb="2">
+          <ScrollArea.Viewport>
+            <ScrollArea.Content>
+              <HStack gap="2" wrap="wrap">
+                <Button
+                  onClick={() => setSelectedCategory(null)}
+                  variant={selectedCategory === null ? "solid" : "outline"}
+                  size="sm"
+                  style={{
+                    background: selectedCategory === null ? COLORS.GOLD_BASE : "transparent",
+                    border: `1px solid ${COLORS.GOLD_DIM}40`,
+                    color: selectedCategory === null ? COLORS.BG : COLORS.GOLD_DIM,
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.6rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  All Categories
+                </Button>
+                {nominations.map((n) => (
+                  <Button
+                    key={n.category.id}
+                    onClick={() => setSelectedCategory(n.category.id)}
+                    variant={selectedCategory === n.category.id ? "solid" : "outline"}
+                    size="sm"
+                    style={{
+                      background: selectedCategory === n.category.id ? COLORS.GOLD_BASE : "transparent",
+                      border: `1px solid ${COLORS.GOLD_DIM}40`,
+                      color: selectedCategory === n.category.id ? COLORS.BG : COLORS.GOLD_DIM,
+                      fontFamily: "'Josefin Sans', sans-serif",
+                      fontSize: "0.6rem",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {/* FIX: Render name and count as explicit strings */}
+                    {String(n.category.name)} ({String(n.count)})
+                  </Button>
+                ))}
+              </HStack>
+            </ScrollArea.Content>
+          </ScrollArea.Viewport>
+        </ScrollArea.Root>
       </Box>
 
       {/* Nominations List */}

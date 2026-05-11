@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Box, VStack, HStack, Heading, Button, Text, Spinner, Table, Checkbox } from "@chakra-ui/react"
+import { Box, VStack, HStack, Heading, Button, Text, Spinner, Table } from "@chakra-ui/react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { COLORS } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
 import { toaster } from "@/components/ui/toaster"
@@ -145,8 +146,8 @@ export function VVIPPickupManager() {
         <HStack>
           <Checkbox
             checked={showPickedUp}
-            onChange={(e) => setShowPickedUp(e.target.checked)}
-            colorScheme="orange"
+            onCheckedChange={(d) => setShowPickedUp(d.checked === true)}
+            colorPalette="orange"
           >
             <Text color={COLORS.TEXT} fontSize="sm">
               Show picked up only
