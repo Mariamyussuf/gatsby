@@ -1,5 +1,15 @@
 import { useState } from "react"
-import { Box, VStack, HStack, Input, Button, Text, Spinner, Badge } from "@chakra-ui/react"
+import {
+  Box,
+  VStack,
+  HStack,
+  Input,
+  Button,
+  Text,
+  Spinner,
+  Badge,
+} from "@chakra-ui/react"
+
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import { toaster } from "@/components/ui/toaster"
@@ -9,16 +19,23 @@ declare const __SUPABASE_ANON_KEY__: string
 
 export function ResendEmails() {
   const [groupCode, setGroupCode] = useState("")
-  const [isSearching, setIsSearching] = useState(false)
-  const [isSending, setIsSending] = useState(false)
-  const [attendees, setAttendees] = useState<any[]>([])
+  const [isSearching, setIsSearching] =
+    useState(false)
+
+  const [isSending, setIsSending] =
+    useState(false)
+
+  const [attendees, setAttendees] = useState<any[]>(
+    []
+  )
 
   const handleSearch = async () => {
     if (!groupCode.trim()) {
       toaster.create({
-        title: "Please enter a group code",
+        title: "Enter a group code",
         type: "error",
       })
+
       return
     }
 
@@ -33,34 +50,32 @@ export function ResendEmails() {
           last_name,
           email,
           ticket_id,
+          table_number,
           group_booking_code
         `)
-        .eq("group_booking_code", groupCode.trim())
+        .eq(
+          "group_booking_code",
+          groupCode.trim()
+        )
 
-      if (error) {
-        throw error
-      }
-
-      if (!data || data.length === 0) {
+      if (error || !data || data.length === 0) {
         toaster.create({
-          title: "No attendees found for this group code",
+          title: "No attendees found",
           type: "error",
         })
 
         setAttendees([])
-        return
+      } else {
+        setAttendees(data)
+
+        toaster.create({
+          title: `Found ${data.length} attendee(s)`,
+          type: "success",
+        })
       }
-
-      setAttendees(data)
-
-      toaster.create({
-        title: `Found ${data.length} attendee(s)`,
-        type: "success",
-      })
     } catch (err: any) {
       toaster.create({
-        title: "Search failed",
-        description: err.message,
+        title: err.message,
         type: "error",
       })
     } finally {
@@ -69,13 +84,7 @@ export function ResendEmails() {
   }
 
   const handleResendEmails = async () => {
-    if (attendees.length === 0) {
-      toaster.create({
-        title: "No attendees to send emails to",
-        type: "error",
-      })
-      return
-    }
+    if (attendees.length === 0) return
 
     setIsSending(true)
 
@@ -87,7 +96,6 @@ export function ResendEmails() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
-            apikey: __SUPABASE_ANON_KEY__,
           },
           body: JSON.stringify({
             groupCode: groupCode.trim(),
@@ -95,160 +103,113 @@ export function ResendEmails() {
         }
       )
 
-      const result = await response.json()
-
       if (!response.ok) {
-        throw new Error(result?.error || `Edge function returned ${response.status}`)
+        throw new Error(
+          `Email function failed: ${response.status}`
+        )
       }
 
       toaster.create({
-        title: "Emails sent successfully",
-        description: `Sent ${attendees.length} confirmation email(s)`,
+        title: "Emails sent",
+        description:
+          "Confirmation emails resent successfully.",
         type: "success",
       })
-
-      console.log("Email send result:", result)
-
-      setGroupCode("")
-      setAttendees([])
     } catch (err: any) {
       toaster.create({
-        title: "Error sending emails",
+        title: "Failed to send emails",
         description: err.message,
         type: "error",
       })
-
-      console.error(err)
     } finally {
       setIsSending(false)
     }
   }
 
   return (
-    <VStack spacing={6} align="stretch">
-      <Box
-        p={6}
-        bg={`${COLORS.GOLD_GLOW}10`}
-        borderRadius="lg"
-        border={`1px solid ${COLORS.GOLD_GLOW}30`}
-      >
+    <Box
+      p={6}
+      bg={`${COLORS.GOLD_GLOW}10`}
+      borderRadius="lg"
+      border={`1px solid ${COLORS.GOLD_GLOW}30`}
+    >
+      <VStack spacing={4} align="stretch">
         <Text
           fontSize="lg"
           fontWeight="600"
           color={COLORS.GOLD_BASE}
-          mb={4}
         >
           Resend Confirmation Emails
         </Text>
 
-        <Text
-          fontSize="sm"
-          color={COLORS.GOLD_DIM}
-          mb={4}
-        >
-          Find attendees by group booking code and resend their confirmation emails.
-        </Text>
+        <HStack>
+          <Input
+            placeholder="Enter group code"
+            value={groupCode}
+            onChange={(e) =>
+              setGroupCode(e.target.value)
+            }
+          />
 
-        <VStack spacing={4} align="stretch">
-          <HStack spacing={2}>
-            <Input
-              placeholder="Enter group code (e.g. GATSBY-8YB8)"
-              value={groupCode}
-              onChange={(e) => setGroupCode(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearch()
-                }
-              }}
-              disabled={isSearching}
-              style={{
-                borderColor: COLORS.GOLD_GLOW,
-                color: COLORS.TEXT,
-              }}
-            />
+          <Button
+            onClick={handleSearch}
+            loading={isSearching}
+            colorPalette="orange"
+          >
+            Search
+          </Button>
+        </HStack>
+
+        {attendees.length > 0 && (
+          <VStack align="stretch">
+            {attendees.map((att) => (
+              <HStack
+                key={att.id}
+                justify="space-between"
+                p={3}
+                bg={COLORS.BG}
+                borderRadius="md"
+              >
+                <Box>
+                  <Text color={COLORS.TEXT}>
+                    {att.first_name}{" "}
+                    {att.last_name}
+                  </Text>
+
+                  <Text
+                    fontSize="xs"
+                    color={COLORS.GOLD_DIM}
+                  >
+                    {att.email}
+                  </Text>
+                </Box>
+
+                <VStack gap={0}>
+                  <Badge colorPalette="yellow">
+                    {att.ticket_id}
+                  </Badge>
+
+                  <Text
+                    fontSize="xs"
+                    color={COLORS.GOLD_DIM}
+                  >
+                    Table {att.table_number}
+                  </Text>
+                </VStack>
+              </HStack>
+            ))}
 
             <Button
-              onClick={handleSearch}
-              disabled={isSearching || !groupCode.trim()}
-              bg={COLORS.GOLD_BASE}
-              color={COLORS.BG}
-              _hover={{ opacity: 0.9 }}
-              minW="120px"
+              mt={4}
+              onClick={handleResendEmails}
+              loading={isSending}
+              colorPalette="green"
             >
-              {isSearching ? <Spinner size="sm" /> : "Search"}
+              Resend Emails
             </Button>
-          </HStack>
-
-          {attendees.length > 0 && (
-            <Box
-              p={4}
-              bg={`${COLORS.GOLD_GLOW}20`}
-              borderRadius="md"
-              border={`1px solid ${COLORS.GOLD_GLOW}50`}
-            >
-              <Text
-                fontSize="sm"
-                color={COLORS.TEXT}
-                mb={3}
-              >
-                <strong>Found {attendees.length} attendee(s)</strong>
-              </Text>
-
-              <VStack spacing={2} align="stretch">
-                {attendees.map((attendee) => (
-                  <HStack
-                    key={attendee.id}
-                    justify="space-between"
-                    p={2}
-                    bg={COLORS.BG}
-                    borderRadius="sm"
-                  >
-                    <VStack align="start" spacing={0}>
-                      <Text
-                        fontSize="sm"
-                        color={COLORS.TEXT}
-                      >
-                        {attendee.first_name} {attendee.last_name}
-                      </Text>
-
-                      <Text
-                        fontSize="xs"
-                        color={COLORS.GOLD_DIM}
-                      >
-                        {attendee.email}
-                      </Text>
-                    </VStack>
-
-                    <Badge colorScheme="yellow">
-                      {attendee.ticket_id}
-                    </Badge>
-                  </HStack>
-                ))}
-              </VStack>
-
-              <Button
-                mt={4}
-                onClick={handleResendEmails}
-                disabled={isSending}
-                width="100%"
-                bg={COLORS.GOLD_BASE}
-                color={COLORS.BG}
-                fontWeight="600"
-                _hover={{ opacity: 0.9 }}
-              >
-                {isSending ? (
-                  <HStack spacing={2}>
-                    <Spinner size="sm" />
-                    <Text>Sending...</Text>
-                  </HStack>
-                ) : (
-                  `Send Confirmation Emails (${attendees.length})`
-                )}
-              </Button>
-            </Box>
-          )}
-        </VStack>
-      </Box>
-    </VStack>
+          </VStack>
+        )}
+      </VStack>
+    </Box>
   )
 }
