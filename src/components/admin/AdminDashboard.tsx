@@ -80,7 +80,8 @@ export function AdminDashboard() {
       .eq("payment_status", "confirmed")
 
     if (attendees && txns) {
-      const totalSold = attendees.length
+      // Count total tickets sold by summing quantity from transactions
+      const totalSold = txns.reduce((s: number, t: any) => s + (t.quantity ?? 0), 0)
       const totalRevenue = txns.reduce((s: number, t: any) => s + (t.total_kobo ?? 0), 0) / 100
 
       const tierMap: Record<string, { count: number; revenue: number; name: string }> = {}
@@ -152,14 +153,20 @@ export function AdminDashboard() {
       </SimpleGrid>
 
       {/* Tabs */}
-      <Tabs.Root defaultValue="awards">
-        <Tabs.List style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, marginBottom: "24px", overflowX: "auto" }}>
-          {TABS.map(({ value, label }) => (
-            <Tabs.Trigger
-              key={value}
-              value={value}
-              style={TAB_TRIGGER_STYLE}
-            >
+      <Tabs.Root defaultValue="overview">
+        <Tabs.List style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}30`, marginBottom: "24px" }}>
+          {[
+            { value: "overview",      label: "Table Map" },
+            { value: "locks",         label: "Table Locks" },
+            { value: "transactions",  label: "Transactions" },
+            { value: "attendees",     label: "Attendees" },
+            { value: "awards",        label: "Awards" },
+            { value: "recovery",      label: "Recovery" },
+            { value: "waitlist",      label: "Waitlist" },
+            { value: "scanner",       label: "QR Scanner" },
+            { value: "vvip",          label: "VVIP Pickups" },
+          ].map(({ value, label }) => (
+            <Tabs.Trigger key={value} value={value} style={tabStyle} _selected={{ color: COLORS.GOLD_BRIGHT, borderBottom: `2px solid ${COLORS.GOLD_BASE}` }}>
               {label}
             </Tabs.Trigger>
           ))}
@@ -167,6 +174,7 @@ export function AdminDashboard() {
         
         <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="locks"><TableLockManager /></Tabs.Content>
+        <Tabs.Content value="transactions"><TransactionsList /></Tabs.Content>
         <Tabs.Content value="attendees"><AttendeeList /></Tabs.Content>
         <Tabs.Content value="awards"><AwardsNominationsList /></Tabs.Content>
         <Tabs.Content value="recovery"><ManualConfirmation /></Tabs.Content>
