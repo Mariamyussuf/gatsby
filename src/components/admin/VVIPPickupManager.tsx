@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Box, VStack, HStack, Heading, Button, Text, Spinner, Table } from "@chakra-ui/react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { COLORS } from "@/config/constants"
+import { COLORS, LEGACY_VVIP_TIER_NAME, PRESTIGE_CIRCLE_TIER_NAME } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
 import { toaster } from "@/components/ui/toaster"
 
@@ -41,20 +41,20 @@ export function VVIPPickupManager() {
 
   const fetchVVIPAttendees = async () => {
     try {
-      // Match tier case-insensitively (schema seed uses "VVIP"; remote DB may differ)
       const { data: tierList } = await supabase
         .from("ticket_tiers")
         .select("id, name")
-        .ilike("name", "vvip")
-        .limit(10)
+        .in("name", [PRESTIGE_CIRCLE_TIER_NAME, LEGACY_VVIP_TIER_NAME])
 
       const tierData =
-        tierList?.find((t) => t.name === "VVIP") ??
-        tierList?.find((t) => t.name.replace(/\s+/g, "").toLowerCase() === "vvip") ??
+        tierList?.find((t) => t.name === PRESTIGE_CIRCLE_TIER_NAME) ??
+        tierList?.find((t) => t.name === LEGACY_VVIP_TIER_NAME) ??
         tierList?.[0]
 
       if (!tierData?.id) {
-        console.warn("[v0] VVIP tier not found — no `ticket_tiers` row matches name ILIKE 'vvip'")
+        console.warn(
+          `[v0] Prestige pickup tier not found — expected ticket_tiers.name "${PRESTIGE_CIRCLE_TIER_NAME}" or "${LEGACY_VVIP_TIER_NAME}"`,
+        )
         setTierMissing(true)
         setAttendees([])
         setLoading(false)
@@ -151,8 +151,8 @@ export function VVIPPickupManager() {
       {tierMissing && (
         <Box p={4} borderRadius="md" borderWidth={1} borderColor={COLORS.GOLD_DIM} bg={`${COLORS.PANEL_MID}80`}>
           <Text color={COLORS.TEXT} fontSize="sm">
-            No VVIP tier found in <code>ticket_tiers</code> (expected a row whose name matches{" "}
-            <code>VVIP</code> case-insensitively). Seed or rename the tier in Supabase, then refresh.
+            No prestige pickup tier in <code>ticket_tiers</code>. Add a row named{" "}
+            <code>{PRESTIGE_CIRCLE_TIER_NAME}</code> (or legacy <code>{LEGACY_VVIP_TIER_NAME}</code>), then refresh.
           </Text>
         </Box>
       )}

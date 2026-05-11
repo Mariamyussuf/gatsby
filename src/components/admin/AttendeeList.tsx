@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
-import { COLORS } from "@/config/constants"
+import { COLORS, isPrestigePickupTier } from "@/config/constants"
 import Papa from "papaparse"
 
 type AttendeeRow = {
@@ -227,12 +227,12 @@ export function AttendeeList() {
                     <Badge
                       style={{
                         background:
-                          a.tier_name === "VVIP"
+                          isPrestigePickupTier(a.tier_name)
                             ? `linear-gradient(135deg, ${COLORS.GOLD_DIM}, ${COLORS.GOLD_BRIGHT})`
                             : a.tier_name === "VIP"
                             ? `${COLORS.GOLD_GLOW}40`
                             : `${COLORS.PANEL}`,
-                        color: a.tier_name === "VVIP" ? COLORS.BG : COLORS.GOLD_BASE,
+                        color: isPrestigePickupTier(a.tier_name) ? COLORS.BG : COLORS.GOLD_BASE,
                         fontFamily: "'Josefin Sans', sans-serif",
                         fontSize: "0.5rem",
                         letterSpacing: "0.1em",

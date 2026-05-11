@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/drawer"
 import { supabase } from "@/lib/supabase"
 import type { TicketTier, GalaTable } from "@/lib/supabase"
-import { COLORS } from "@/config/constants"
+import { COLORS, isPrestigePickupTier } from "@/config/constants"
 import { TablePicker } from "./TablePicker"
 import { WaitlistForm } from "@/components/booking/WaitlistForm"
 
@@ -252,7 +252,7 @@ export function TicketTiers({ onSelect }: Props) {
           const remaining = tier.availableSeats
           const isSoldOut = remaining <= 0
           const isSelected = selectedTierId === tier.id
-          const isVVIP = tier.name === "VVIP"
+          const isPrestigeTier = isPrestigePickupTier(tier.name)
 
           return (
             <Box
@@ -261,7 +261,7 @@ export function TicketTiers({ onSelect }: Props) {
               style={{
                 background: isSelected
                   ? `linear-gradient(180deg, ${COLORS.GOLD_GLOW}30 0%, ${COLORS.PANEL_MID} 100%)`
-                  : isVVIP
+                  : isPrestigeTier
                     ? `linear-gradient(180deg, ${COLORS.PANEL} 0%, ${COLORS.PANEL_MID} 100%)`
                     : `linear-gradient(180deg, ${COLORS.PANEL_MID} 0%, ${COLORS.BG} 100%)`,
                 border: isSelected
@@ -269,17 +269,17 @@ export function TicketTiers({ onSelect }: Props) {
                   : `2px solid ${COLORS.GOLD_DIM}40`,
                 marginLeft: idx > 0 ? "-2px" : "0",
                 transition: "all 0.3s ease",
-                transform: isVVIP ? "scaleY(1.02)" : "none",
-                zIndex: isVVIP ? 2 : isSelected ? 3 : 1,
+                transform: isPrestigeTier ? "scaleY(1.02)" : "none",
+                zIndex: isPrestigeTier ? 2 : isSelected ? 3 : 1,
                 boxShadow: isSelected
                   ? `0 0 40px ${COLORS.GOLD_GLOW}40`
-                  : isVVIP
+                  : isPrestigeTier
                     ? `0 0 30px ${COLORS.GOLD_GLOW}20`
                     : "none",
               }}
             >
               {/* VVIP badge */}
-              {isVVIP && (
+              {isPrestigeTier && (
                 <Box
                   position="absolute"
                   top="-14px"

@@ -1,3 +1,4 @@
+import { isPrestigePickupTier } from "@/config/constants"
 import { supabase } from "@/lib/supabase"
 
 declare const __SUPABASE_URL__: string
@@ -244,8 +245,8 @@ export async function confirmBooking(
         att.email
       )
 
-      // Create VVIP pickup if needed
-      if (pending.tierName === "VVIP") {
+      // Create prestige-tier pickup if needed (Prestige Circle in prod; VVIP in legacy seed)
+      if (isPrestigePickupTier(pending.tierName)) {
         const { data: rec, error: recError } =
           await supabase
             .from("attendees")

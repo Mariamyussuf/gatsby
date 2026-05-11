@@ -5,6 +5,22 @@ export const EVENT_VENUE = "MARQUEE HALL"
 export const EVENT_DRESS_CODE = "Black Tie"
 export const CONTACT_EMAIL = "events@busa.edu.ng"
 
+/** Production value of `ticket_tiers.name` for the top tier (pickups, premium UI). */
+export const PRESTIGE_CIRCLE_TIER_NAME = "Prestige Circle"
+
+/** Older seed / local DB name — still treated as the same tier when present. */
+export const LEGACY_VVIP_TIER_NAME = "VVIP"
+
+const PRESTIGE_TIER_LOOKUP = new Set(
+  [PRESTIGE_CIRCLE_TIER_NAME, LEGACY_VVIP_TIER_NAME].map((n) => n.trim().toLowerCase()),
+)
+
+/** True if this tier name is the prestige / top tier (pickup list, badge styling). */
+export function isPrestigePickupTier(name: string | null | undefined): boolean {
+  if (!name) return false
+  return PRESTIGE_TIER_LOOKUP.has(name.trim().toLowerCase())
+}
+
 export const TRANSFER_LOCK_HOURS = 24
 export const QR_EMAIL_DAYS_BEFORE = 3
 
