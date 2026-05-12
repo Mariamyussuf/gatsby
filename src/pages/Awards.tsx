@@ -30,80 +30,81 @@ interface Nomination {
   categoryName: string
   nomineeName: string
   badge?: string
+  description?: string
 }
 
 const MATRIC_REGEX = /^\d{4}\/\d{4,5}$/
 
 const AWARD_GROUPS = [
   {
+    type: "innovation",
+    name: "Innovation Awards",
+    awards: [
+      { name: "Brand of the Year", description: "Awarded to the most impactful and recognized student brand or business on campus." },
+      { name: "Innovation of the Year", description: "This award acknowledges the individual with the best invention, creation/ discovery that solves a problem in our immediate community." },
+      { name: "Entrepreneur of the Year", description: "Recognizing a student who has shown excellence in business, leadership, and entrepreneurship." },
+    ],
+  },
+  {
     type: "social",
     name: "Social Awards",
     awards: [
-      "Freshest Fresher of the Year [100 Level Only]",
-      "Rookie of the Year",
-      "Next Rated [100 Level Only]",
-      "Most Fashionable (Female)",
-      "Most Fashionable (Male)",
-      "Most Influential (Female)",
-      "Most Influential (Male)",
-      "Most Popular (Male)",
-      "Most Popular (Female)",
-      "Spotlight Award",
-      "Most Sociable (Male)",
-      "Most Sociable (Female)",
-      "Clique of the Year",
+      { name: "Freshest Fresher of the Year [100 Level]", description: "Awarded to the most admired and outstanding fresher on campus." },
+      { name: "Most Fashionable (Female)", description: "Recognizing the female student with the best sense of style and fashion presence." },
+      { name: "Most Fashionable (Male)", description: "Recognizing the male student with the best sense of style and fashion presence." },
+      { name: "Rookie of the Year [100 Level]", description: "Awarded to a fresher who made a strong impact within a short period." },
+      { name: "Most Influential (Female)", description: "For a female student whose presence, voice, and actions positively influence others." },
+      { name: "Most Influential (Male)", description: "For a male student whose presence, voice, and actions positively influence others." },
+      { name: "Most Popular (Male)", description: "Awarded to the male student widely known and admired across campus." },
+      { name: "Most Popular (Female)", description: "Awarded to the female student widely known and admired across campus." },
+      { name: "Spotlight Award", description: "Given to a student who consistently stands out and captures attention positively." },
+      { name: "Most Sociable (Male)", description: "Recognizing a male student known for friendliness, connections, and social engagement." },
+      { name: "Most Sociable (Female)", description: "Recognizing a female student known for friendliness, connections, and social engagement." },
+      { name: "Clique of the Year", description: "An award given to the most recognized, influential, talked about, active, and admired friend group or social circle in the school." },
     ],
   },
   {
     type: "entertainment",
     name: "Entertainment Awards",
     awards: [
-      "Talent of the Year",
-      "Content of the Year",
-      "Artiste of the Year",
-      "DJ / Music Producer of the Year",
-      "Icon 360",
+      { name: "Talent of the Year", description: "Recognizing the most outstanding and gifted talent in any entertainment field." },
+      { name: "Content Creator of the Year", description: "This award celebrates the creator who effectively leveraged resources to deliver significant value through the creation of content." },
+      { name: "Artiste of the Year", description: "Given to the most outstanding music artiste on campus." },
+      { name: "DJ / Music Producer of the Year", description: "From mere sounds to revolutionary music. This award celebrates the music wizard, possessing the talent to craft and innovate delightful melodies." },
+      { name: "Icon 360", description: "This award recognizes the individual who has demonstrated exceptional involvement in campus activities, excluding executives, and has made outstanding contributions to the university community." },
+      { name: "Next Rated [100 Level]", description: "Given to a promising fresher showing great entertainment potential." },
     ],
   },
   {
     type: "sports",
     name: "Sports Awards",
     awards: [
-      "Sport Personality (Male)",
-      "Sport Personality (Female)",
-      "Football (Male)",
-      "Football (Female)",
-      "Basketball (Female)",
-      "Basketball (Male)",
+      { name: "Sports Personality (Male)", description: "Recognizing a male student with exceptional impact in sports and fitness activities." },
+      { name: "Sports Personality (Female)", description: "Recognizing a female student with exceptional impact in sports and fitness activities." },
+      { name: "Footballer of the Year (Male)", description: "Awarded to the best performing male football player on campus." },
+      { name: "Footballer of the Year (Female)", description: "Awarded to the best performing female football player on campus." },
+      { name: "Basketball Player of the Year (Female)", description: "Recognizing the most outstanding female basketball player." },
+      { name: "Basketball Player of the Year (Male)", description: "Recognizing the most outstanding male basketball player." },
     ],
   },
   {
     type: "creative",
     name: "Creative Awards",
     awards: [
-      "Graphic Designer of the Year",
-      "Videographer of the Year",
-      "Photographer of the Year",
-    ],
-  },
-  {
-    type: "innovation",
-    name: "Innovation Awards",
-    awards: [
-      "Brand of the Year",
-      "Innovation of the Year",
-      "Entrepreneur of the Year",
+      { name: "Graphic Designer of the Year", description: "Awarded to the most creative and impactful graphic designer on campus." },
+      { name: "Videographer of the Year", description: "Recognizing excellence in video creation, editing, and storytelling." },
+      { name: "Photographer of the Year", description: "Given to the student with exceptional photography skills and creativity." },
     ],
   },
   {
     type: "leadership",
     name: "Leadership Awards",
     awards: [
-      "Academic Excellence Award",
-      "Most Outstanding Student of the Year",
-      "Distinguished Executive (Female)",
-      "Distinguished Executive (Male)",
-      "Lecturer of the Year",
+      { name: "Academic Excellence Award", description: "Awarded to a student with outstanding academic performance and consistency." },
+      { name: "Most Outstanding Student of the Year", description: "Recognizing an exceptional student with overall excellence and impact." },
+      { name: "Distinguished Executive (Female)", description: "This award honors the commitment and diligence demonstrated in serving the student body and the school community as a whole." },
+      { name: "Distinguished Executive (Male)" },
+      { name: "Lecturer of the Year", description: "Recognizing the lecturer who made the greatest impact on students academically and personally." },
     ],
   },
 ]
@@ -318,7 +319,8 @@ export default function AwardsPage() {
     AWARD_GROUPS.forEach((group) => {
       init[group.type] = group.awards.map((award) => ({
         categoryId: "",
-        categoryName: award,
+        categoryName: award.name,
+        description: award.description,
         nomineeName: "",
       }))
     })
@@ -749,8 +751,9 @@ export default function AwardsPage() {
                       borderLeft={`1px solid ${COLORS.GOLD_DIM}30`}
                       pl={4}
                       py={1}
+                      mb={4}
                     >
-                      <HStack gap={2} mb={2} align="center">
+                      <HStack gap={2} mb={1} align="center">
                         <Text
                           color={COLORS.GOLD_DIM}
                           fontSize="xs"
@@ -761,6 +764,11 @@ export default function AwardsPage() {
                         </Text>
                         {note && <NoteBadge note={note} />}
                       </HStack>
+                      {nom.description && (
+                        <Text color={`${COLORS.GOLD_DIM}80`} fontSize="11px" mb={3} lineHeight="1.6">
+                          {nom.description}
+                        </Text>
+                      )}
                       <FormField label="Nominee's Full Name *" error={errors[`${group.type}_${i}`]}>
                         <Input
                           placeholder="Who are you nominating?"
