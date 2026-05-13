@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react"
-import { Box, VStack, HStack, Text, Input, Badge, SimpleGrid, ScrollArea, Button } from "@chakra-ui/react"
+import { useEffect, useRef, useState } from "react"
+import {
+  Box,
+  HStack,
+  Input,
+  Text,
+  VStack,
+  Button,
+} from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import type { Database } from "@/lib/supabase"
@@ -13,11 +20,284 @@ interface CategoryNominations {
   count: number
 }
 
+interface TallyEntry {
+  name: string
+  count: number
+}
+
+function buildTally(nominations: Nomination[]): TallyEntry[] {
+  const map: Record<string, number> = {}
+  for (const nom of nominations) {
+    const key = (nom.nominee_name ?? "Unknown").trim()
+    map[key] = (map[key] ?? 0) + 1
+  }
+  return Object.entries(map)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+}
+
+// ── Bar Chart ──────────────────────────────────────────────────────────────
+function NomineeBarChart({ nominations }: { nominations: Nomination[] }) {
+  const tally = buildTally(nominations)
+  if (tally.length === 0) {
+    return (
+      <Text
+        style={{
+          fontFamily: "'Josefin Sans', sans-serif",
+          fontSize: "0.7rem",
+          color: `${COLORS.GOLD_DIM}70`,
+          fontStyle: "italic",
+        }}
+      >
+        No nominations yet
+      </Text>
+    )
+  }
+
+  const max = tally[0].count
+
+  return (
+    <VStack gap="2" align="stretch" width="100%">
+      {tally.map((entry, i) => {
+        const pct = Math.round((entry.count / max) * 100)
+        const isTop = i === 0
+        return (
+          <Box key={entry.name}>
+            <HStack justify="space-between" mb="1">
+              <Text
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: "0.72rem",
+                  color: isTop ? COLORS.GOLD_BRIGHT : COLORS.GOLD_DIM,
+                  fontWeight: isTop ? "600" : "400",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "60%",
+                }}
+              >
+                {entry.name}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: "0.75rem",
+                  color: isTop ? COLORS.GOLD_BASE : `${COLORS.GOLD_DIM}90`,
+                  minWidth: "28px",
+                  textAlign: "right",
+                }}
+              >
+                {entry.count}
+              </Text>
+            </HStack>
+            {/* Track */}
+            <Box
+              w="100%"
+              h="6px"
+              style={{
+                background: `${COLORS.GOLD_DIM}18`,
+                borderRadius: "3px",
+                overflow: "hidden",
+              }}
+            >
+              {/* Fill */}
+              <Box
+                h="100%"
+                style={{
+                  width: `${pct}%`,
+                  background: isTop
+                    ? `linear-gradient(90deg, ${COLORS.GOLD_BASE}, ${COLORS.GOLD_BRIGHT})`
+                    : `${COLORS.GOLD_DIM}60`,
+                  borderRadius: "3px",
+                  transition: "width 0.6s ease",
+                }}
+              />
+            </Box>
+          </Box>
+        )
+      })}
+    </VStack>
+  )
+}
+
+// ── Category Card ───────────────────────────────────────────────────────────
+function CategoryCard({
+  data,
+  searchQuery,
+  sectionRef,
+}: {
+  data: CategoryNominations
+  searchQuery: string
+  sectionRef: (el: HTMLDivElement | null) => void
+}) {
+  const filtered = data.nominations.filter(
+    (nom) =>
+      !searchQuery ||
+      nom.nominee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      nom.nominator_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  return (
+    <Box
+      ref={sectionRef}
+      p="6"
+      mb="4"
+      style={{
+        border: `1px solid ${COLORS.GOLD_DIM}35`,
+        background: `${COLORS.PANEL_MID}25`,
+        borderRadius: "6px",
+        scrollMarginTop: "16px",
+      }}
+    >
+      {/* Category Header */}
+      <HStack justify="space-between" mb="4" align="start">
+        <VStack gap="0" align="start">
+          <Text
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "1.15rem",
+              fontWeight: "600",
+              color: COLORS.GOLD_BRIGHT,
+              letterSpacing: "0.5px",
+            }}
+          >
+            {data.category.name}
+          </Text>
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.6rem",
+              color: COLORS.GOLD_DIM,
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+            }}
+          >
+            {data.count} nomination{data.count !== 1 ? "s" : ""}
+          </Text>
+        </VStack>
+
+        {/* Mini nomination count badge */}
+        <Box
+          style={{
+            background: `${COLORS.GOLD_BASE}15`,
+            border: `1px solid ${COLORS.GOLD_DIM}40`,
+            borderRadius: "4px",
+            padding: "4px 10px",
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "1.3rem",
+              fontWeight: "700",
+              color: COLORS.GOLD_BASE,
+              lineHeight: 1,
+            }}
+          >
+            {data.count}
+          </Text>
+        </Box>
+      </HStack>
+
+      {/* Two-column: bar chart + nominee list */}
+      <HStack gap="6" align="start">
+        {/* Bar Chart */}
+        <Box flex="1" minW="0">
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.55rem",
+              letterSpacing: "0.18em",
+              color: `${COLORS.GOLD_DIM}80`,
+              textTransform: "uppercase",
+              marginBottom: "10px",
+            }}
+          >
+            Votes
+          </Text>
+          <NomineeBarChart nominations={data.nominations} />
+        </Box>
+
+        {/* Separator */}
+        <Box
+          w="1px"
+          alignSelf="stretch"
+          style={{ background: `${COLORS.GOLD_DIM}20`, flexShrink: 0 }}
+        />
+
+        {/* Nomination entries */}
+        <Box flex="1" minW="0">
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.55rem",
+              letterSpacing: "0.18em",
+              color: `${COLORS.GOLD_DIM}80`,
+              textTransform: "uppercase",
+              marginBottom: "10px",
+            }}
+          >
+            Entries
+          </Text>
+
+          {filtered.length === 0 ? (
+            <Text
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.7rem",
+                color: `${COLORS.GOLD_DIM}60`,
+                fontStyle: "italic",
+              }}
+            >
+              {searchQuery ? "No matches" : "No nominations yet"}
+            </Text>
+          ) : (
+            <VStack gap="2" align="stretch">
+              {filtered.map((nom) => (
+                <Box
+                  key={nom.id}
+                  style={{
+                    borderLeft: `2px solid ${COLORS.GOLD_DIM}35`,
+                    paddingLeft: "10px",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontSize: "0.9rem",
+                      fontWeight: "500",
+                      color: COLORS.GOLD_BRIGHT,
+                    }}
+                  >
+                    {String(nom.nominee_name ?? "")}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: "'Josefin Sans', sans-serif",
+                      fontSize: "0.65rem",
+                      color: `${COLORS.GOLD_DIM}80`,
+                    }}
+                  >
+                    by {String(nom.nominator_name ?? "")}
+                  </Text>
+                </Box>
+              ))}
+            </VStack>
+          )}
+        </Box>
+      </HStack>
+    </Box>
+  )
+}
+
+// ── Main Component ──────────────────────────────────────────────────────────
 export function AwardsNominationsList() {
   const [nominations, setNominations] = useState<CategoryNominations[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const fetchNominations = async () => {
     try {
@@ -38,9 +318,10 @@ export function AwardsNominationsList() {
           count: allNominations.filter((n) => n.award_category_id === cat.id).length,
         }))
         setNominations(grouped)
+        if (!activeId && grouped.length > 0) setActiveId(grouped[0].category.id)
       }
     } catch (err) {
-      console.error("[v0] Error fetching nominations:", err)
+      console.error("[AwardsNominationsList] Error fetching:", err)
     } finally {
       setIsLoading(false)
     }
@@ -48,30 +329,16 @@ export function AwardsNominationsList() {
 
   useEffect(() => {
     fetchNominations()
-    const interval = setInterval(fetchNominations, 5000)
+    const interval = setInterval(fetchNominations, 10000)
     return () => clearInterval(interval)
   }, [])
 
-  // FIX: Derive allNoms and totalNominations with explicit typed variables
-  // to avoid accidentally passing an object into JSX.
-  const matchedGroup: CategoryNominations | undefined = selectedCategory
-    ? nominations.find((n) => n.category.id === selectedCategory)
-    : undefined
+  const scrollTo = (id: string) => {
+    setActiveId(id)
+    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
-  const allNoms: Nomination[] = selectedCategory
-    ? (matchedGroup?.nominations ?? [])
-    : nominations.flatMap((n) => n.nominations)
-
-  const totalNominations: number = selectedCategory
-    ? (matchedGroup?.count ?? 0)
-    : nominations.reduce((sum, n) => sum + n.count, 0)
-
-  const searchedNoms: Nomination[] = allNoms.filter(
-    (nom) =>
-      nom.nominee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      nom.nominator_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      nom.nomination_reason?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const totalNominations = nominations.reduce((s, n) => s + n.count, 0)
 
   if (isLoading) {
     return (
@@ -82,240 +349,152 @@ export function AwardsNominationsList() {
   }
 
   return (
-    <VStack gap="6" align="stretch">
-      {/* Header Stats */}
+    <HStack align="start" gap="0" height="calc(100vh - 180px)" overflow="hidden">
+      {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}
       <Box
-        p="6"
+        w="220px"
+        flexShrink={0}
+        height="100%"
+        overflowY="auto"
+        pr="3"
         style={{
-          border: `1px solid ${COLORS.GOLD_DIM}40`,
-          background: `linear-gradient(180deg, ${COLORS.PANEL_MID}60 0%, ${COLORS.BG} 100%)`,
+          borderRight: `1px solid ${COLORS.GOLD_DIM}25`,
         }}
       >
-        <HStack justify="space-between" mb="4">
-          <VStack gap="0" align="start">
-            <Text
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.6rem",
-                letterSpacing: "0.2em",
-                color: COLORS.GOLD_DIM,
-                textTransform: "uppercase",
-              }}
-            >
-              Total Nominations
-            </Text>
-            <Text
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "2.2rem",
-                fontWeight: "700",
-                color: COLORS.GOLD_BRIGHT,
-              }}
-            >
-              {/* FIX: Always coerce to string */}
-              {String(totalNominations)}
-            </Text>
-          </VStack>
-          <Button
-            onClick={fetchNominations}
-            size="sm"
+        {/* Total */}
+        <Box mb="4" pb="3" style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}20` }}>
+          <Text
             style={{
-              background: COLORS.GOLD_BASE,
-              color: COLORS.BG,
               fontFamily: "'Josefin Sans', sans-serif",
               fontSize: "0.55rem",
-              letterSpacing: "0.15em",
-              cursor: "pointer",
-              padding: "8px 16px",
+              letterSpacing: "0.2em",
+              color: COLORS.GOLD_DIM,
+              textTransform: "uppercase",
+              marginBottom: "2px",
             }}
           >
-            Refresh
-          </Button>
-        </HStack>
-        <Input
-          placeholder="Search by nominee, nominator, or reason..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            background: `${COLORS.BG}60`,
-            border: `1px solid ${COLORS.GOLD_DIM}40`,
-            color: COLORS.TEXT,
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: "0.85rem",
-            padding: "8px 12px",
-          }}
-        />
-      </Box>
+            Total Nominations
+          </Text>
+          <Text
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "2rem",
+              fontWeight: "700",
+              color: COLORS.GOLD_BRIGHT,
+              lineHeight: 1,
+            }}
+          >
+            {totalNominations}
+          </Text>
+        </Box>
 
-      {/* Category Filters */}
-      <Box>
+        {/* Refresh */}
+        <Button
+          onClick={fetchNominations}
+          size="sm"
+          width="100%"
+          mb="4"
+          style={{
+            background: `${COLORS.GOLD_BASE}18`,
+            border: `1px solid ${COLORS.GOLD_DIM}40`,
+            color: COLORS.GOLD_BASE,
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: "0.55rem",
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+          }}
+        >
+          ↺ Refresh
+        </Button>
+
+        {/* Category nav links */}
         <Text
           style={{
             fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: "0.65rem",
+            fontSize: "0.55rem",
             letterSpacing: "0.2em",
-            color: COLORS.GOLD_DIM,
+            color: `${COLORS.GOLD_DIM}80`,
             textTransform: "uppercase",
-            marginBottom: "12px",
+            marginBottom: "8px",
           }}
         >
           Categories
         </Text>
-        <ScrollArea.Root width="100%" pb="2">
-          <ScrollArea.Viewport>
-            <ScrollArea.Content>
-              <HStack gap="2" wrap="wrap">
-                <Button
-                  onClick={() => setSelectedCategory(null)}
-                  variant={selectedCategory === null ? "solid" : "outline"}
-                  size="sm"
-                  style={{
-                    background: selectedCategory === null ? COLORS.GOLD_BASE : "transparent",
-                    border: `1px solid ${COLORS.GOLD_DIM}40`,
-                    color: selectedCategory === null ? COLORS.BG : COLORS.GOLD_DIM,
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: "0.6rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  All Categories
-                </Button>
-                {nominations.map((n) => (
-                  <Button
-                    key={n.category.id}
-                    onClick={() => setSelectedCategory(n.category.id)}
-                    variant={selectedCategory === n.category.id ? "solid" : "outline"}
-                    size="sm"
-                    style={{
-                      background: selectedCategory === n.category.id ? COLORS.GOLD_BASE : "transparent",
-                      border: `1px solid ${COLORS.GOLD_DIM}40`,
-                      color: selectedCategory === n.category.id ? COLORS.BG : COLORS.GOLD_DIM,
-                      fontFamily: "'Josefin Sans', sans-serif",
-                      fontSize: "0.6rem",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {/* FIX: Render name and count as explicit strings */}
-                    {String(n.category.name)} ({String(n.count)})
-                  </Button>
-                ))}
-              </HStack>
-            </ScrollArea.Content>
-          </ScrollArea.Viewport>
-        </ScrollArea.Root>
-      </Box>
 
-      {/* Nominations List */}
-      {searchedNoms.length === 0 ? (
-        <Box
-          p="6"
-          textAlign="center"
-          style={{
-            border: `1px dashed ${COLORS.GOLD_DIM}40`,
-          }}
-        >
-          <Text color={COLORS.GOLD_DIM}>
-            {searchQuery ? "No nominations matching your search" : "No nominations yet"}
-          </Text>
-        </Box>
-      ) : (
-        <VStack gap="3" align="stretch">
-          {searchedNoms.map((nom) => {
-            const category = nominations.find((n) => n.category.id === nom.award_category_id)?.category
+        <VStack gap="1" align="stretch">
+          {nominations.map((n) => {
+            const isActive = activeId === n.category.id
             return (
               <Box
-                key={nom.id}
-                p="4"
+                key={n.category.id}
+                onClick={() => scrollTo(n.category.id)}
                 style={{
-                  border: `1px solid ${COLORS.GOLD_DIM}40`,
-                  background: `${COLORS.PANEL_MID}30`,
+                  cursor: "pointer",
+                  padding: "7px 10px",
                   borderRadius: "4px",
+                  borderLeft: `2px solid ${isActive ? COLORS.GOLD_BASE : "transparent"}`,
+                  background: isActive ? `${COLORS.GOLD_BASE}12` : "transparent",
+                  transition: "all 0.2s ease",
                 }}
               >
-                <HStack justify="space-between" mb="2" align="start">
-                  <VStack gap="1" align="start" flex="1">
-                    <HStack gap="2" align="center">
-                      <Text
-                        style={{
-                          fontFamily: "'Cormorant Garamond', serif",
-                          fontSize: "1rem",
-                          fontWeight: "600",
-                          color: COLORS.GOLD_BRIGHT,
-                        }}
-                      >
-                        {/* FIX: Coerce to string */}
-                        {String(nom.nominee_name ?? "")}
-                      </Text>
-                      <Badge
-                        style={{
-                          background: COLORS.GOLD_BASE,
-                          color: COLORS.BG,
-                          fontFamily: "'Josefin Sans', sans-serif",
-                          fontSize: "0.5rem",
-                        }}
-                      >
-                        {/* FIX: Coerce to string */}
-                        {String(category?.name ?? "Unknown")}
-                      </Badge>
-                    </HStack>
-                    <Text
-                      style={{
-                        fontFamily: "'Josefin Sans', sans-serif",
-                        fontSize: "0.75rem",
-                        color: COLORS.GOLD_DIM,
-                      }}
-                    >
-                      Nominated by: {String(nom.nominator_name ?? "")}
-                    </Text>
-                  </VStack>
-                  <Text
-                    style={{
-                      fontFamily: "'Josefin Sans', sans-serif",
-                      fontSize: "0.65rem",
-                      color: COLORS.GOLD_DIM,
-                    }}
-                  >
-                    {new Date(nom.created_at).toLocaleDateString()}
-                  </Text>
-                </HStack>
-
-                {nom.nomination_reason && (
-                  <Text
-                    style={{
-                      fontFamily: "'Josefin Sans', sans-serif",
-                      fontSize: "0.8rem",
-                      color: COLORS.TEXT,
-                      lineHeight: "1.4",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    {String(nom.nomination_reason)}
-                  </Text>
-                )}
-
-                {nom.evidence_link && (
-                  <Text
-                    as="a"
-                    href={nom.evidence_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontFamily: "'Josefin Sans', sans-serif",
-                      fontSize: "0.75rem",
-                      color: COLORS.GOLD_BASE,
-                      textDecoration: "underline",
-                      cursor: "pointer",
-                    }}
-                  >
-                    View Evidence
-                  </Text>
-                )}
+                <Text
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.68rem",
+                    color: isActive ? COLORS.GOLD_BRIGHT : COLORS.GOLD_DIM,
+                    fontWeight: isActive ? "600" : "400",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {n.category.name}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.58rem",
+                    color: `${COLORS.GOLD_DIM}70`,
+                  }}
+                >
+                  {n.count} vote{n.count !== 1 ? "s" : ""}
+                </Text>
               </Box>
             )
           })}
         </VStack>
-      )}
-    </VStack>
+      </Box>
+
+      {/* ── RIGHT CONTENT ─────────────────────────────────────── */}
+      <Box flex="1" height="100%" overflowY="auto" pl="5" pr="1">
+        {/* Search */}
+        <Box mb="4">
+          <Input
+            placeholder="Search by nominee or nominator…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              background: `${COLORS.BG}60`,
+              border: `1px solid ${COLORS.GOLD_DIM}40`,
+              color: COLORS.TEXT,
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.82rem",
+              padding: "8px 12px",
+              borderRadius: "4px",
+              width: "100%",
+            }}
+          />
+        </Box>
+
+        {/* One card per category */}
+        {nominations.map((n) => (
+          <CategoryCard
+            key={n.category.id}
+            data={n}
+            searchQuery={searchQuery}
+            sectionRef={(el) => { sectionRefs.current[n.category.id] = el }}
+          />
+        ))}
+      </Box>
+    </HStack>
   )
 }
