@@ -121,6 +121,16 @@ function buildPREmailHtml(params: {
 
     <div class="divider"></div>
 
+    <!-- Plus one CTA -->
+    <div class="section-title" style="margin-top:32px">Bring a Plus One</div>
+    <p class="text">
+      What's a dinner without a plus one? If someone special deserves a seat at this table,
+      make sure they have a ticket before they sell out.
+    </p>
+    <a href="https://busagreatgatbsy.vercel.app" class="btn-outline">Get Tickets</a>
+
+    <div class="divider"></div>
+
     <!-- Quote -->
     <div class="quote">
       "In his blue gardens, men and girls came and went like moths<br/>
