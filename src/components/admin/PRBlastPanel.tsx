@@ -17,21 +17,48 @@ export function PRBlastPanel() {
   const [state, setState] = useState<BlastState>("idle")
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [results, setResults] = useState<{ sent: number; failed: number } | null>(null)
+  const [testEmail, setTestEmail] = useState("yussufmariamagbeke@gmail.com")
+  const [testSending, setTestSending] = useState(false)
+
+  const callBlast = async (body: object) => {
+    const res = await fetch(`${__SUPABASE_URL__}/functions/v1/send-pr-blast`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
+        apikey: __SUPABASE_ANON_KEY__,
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? "Request failed")
+    return data
+  }
+
+  const sendTest = async () => {
+    if (!testEmail.trim()) {
+      toaster.create({ title: "Enter a test email address", type: "error" })
+      return
+    }
+    setTestSending(true)
+    try {
+      const data = await callBlast({ override_email: testEmail.trim() })
+      toaster.create({
+        title: data.sent === 1 ? `Test PR email sent to ${testEmail} ✓` : "Test failed",
+        type: data.sent === 1 ? "success" : "error",
+        duration: 6000,
+      })
+    } catch (err) {
+      toaster.create({ title: String(err), type: "error" })
+    } finally {
+      setTestSending(false)
+    }
+  }
 
   const runDryRun = async () => {
     setState("previewing")
     try {
-      const res = await fetch(`${__SUPABASE_URL__}/functions/v1/send-pr-blast`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
-          apikey: __SUPABASE_ANON_KEY__,
-        },
-        body: JSON.stringify({ dry_run: true }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Preview failed")
+      const data = await callBlast({ dry_run: true })
       setRecipients(data.recipients ?? [])
       setState("confirming")
     } catch (err) {
@@ -40,20 +67,11 @@ export function PRBlastPanel() {
     }
   }
 
+
   const sendBlast = async () => {
     setState("sending")
     try {
-      const res = await fetch(`${__SUPABASE_URL__}/functions/v1/send-pr-blast`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${__SUPABASE_ANON_KEY__}`,
-          apikey: __SUPABASE_ANON_KEY__,
-        },
-        body: JSON.stringify({ dry_run: false }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Send failed")
+      const data = await callBlast({ dry_run: false })
       setResults({ sent: data.sent, failed: data.failed })
       setState("done")
       toaster.create({
@@ -124,6 +142,72 @@ export function PRBlastPanel() {
             Each email includes their personalised Manage Ticket link.
           </Text>
         </VStack>
+
+        {/* ── TEST SEND ── */}
+        <Box
+          p={4}
+          style={{
+            border: `1px solid ${COLORS.GOLD_DIM}25`,
+            borderRadius: "4px",
+            background: `${COLORS.GOLD_DIM}06`,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.58rem",
+              letterSpacing: "0.2em",
+              color: `${COLORS.GOLD_DIM}90`,
+              textTransform: "uppercase",
+              marginBottom: "10px",
+            }}
+          >
+            Test — Send to Your Inbox
+          </Text>
+          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: `${COLORS.GOLD_DIM}80`, marginBottom: "4px" }}>
+            Sends the PR email to this address only (won't go to real attendees)
+          </Text>
+          <HStack gap={2}>
+            <input
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="your@email.com"
+              type="email"
+              style={{
+                flex: 1,
+                background: `${COLORS.PANEL_MID}60`,
+                border: `1px solid ${COLORS.GOLD_DIM}40`,
+                color: COLORS.GOLD_BASE,
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.72rem",
+                padding: "8px 12px",
+                borderRadius: "3px",
+                outline: "none",
+              }}
+            />
+            <Button
+              onClick={sendTest}
+              loading={testSending}
+              style={{
+                background: `${COLORS.GOLD_DIM}20`,
+                border: `1px solid ${COLORS.GOLD_DIM}50`,
+                color: COLORS.GOLD_DIM,
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.6rem",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                padding: "8px 16px",
+                cursor: "pointer",
+                borderRadius: "3px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Send Test
+            </Button>
+          </HStack>
+        </Box>
+
+        <Box w="100%" h="1px" style={{ background: `${COLORS.GOLD_DIM}20` }} />
 
         {/* ── IDLE ── */}
         {state === "idle" && (

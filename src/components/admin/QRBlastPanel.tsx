@@ -23,6 +23,7 @@ export function QRBlastPanel() {
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [results, setResults] = useState<{ sent: number; failed: number } | null>(null)
   const [testId, setTestId] = useState("")
+  const [testEmail, setTestEmail] = useState("yussufmariamagbeke@gmail.com")
   const [testSending, setTestSending] = useState(false)
 
   // Date gate
@@ -78,13 +79,22 @@ export function QRBlastPanel() {
   }
 
   const sendTest = async () => {
-    if (!testId.trim()) return
+    if (!testId.trim()) {
+      toaster.create({ title: "Paste an attendee UUID first", type: "error" })
+      return
+    }
+    if (!testEmail.trim()) {
+      toaster.create({ title: "Enter a test email address", type: "error" })
+      return
+    }
     setTestSending(true)
     try {
-      const data = await callFunction({ attendee_id: testId.trim() })
+      const data = await callFunction({
+        attendee_id: testId.trim(),
+        override_email: testEmail.trim(),
+      })
       toaster.create({
-        title: data.sent === 1 ? "Test QR sent ✓" : "Test failed",
-        description: data.results?.[0]?.email ?? "",
+        title: data.sent === 1 ? `Test QR sent to ${testEmail} ✓` : "Test failed",
         type: data.sent === 1 ? "success" : "error",
         duration: 6000,
       })
@@ -200,13 +210,41 @@ export function QRBlastPanel() {
               marginBottom: "10px",
             }}
           >
-            Test — Send to a Single Attendee
+            Test — Send to Your Inbox
+          </Text>
+
+          {/* Email override */}
+          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: `${COLORS.GOLD_DIM}80`, marginBottom: "4px" }}>
+            Send to
+          </Text>
+          <input
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            placeholder="your@email.com"
+            type="email"
+            style={{
+              width: "100%",
+              background: `${COLORS.PANEL_MID}60`,
+              border: `1px solid ${COLORS.GOLD_DIM}40`,
+              color: COLORS.GOLD_BASE,
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.72rem",
+              padding: "8px 12px",
+              borderRadius: "3px",
+              outline: "none",
+              marginBottom: "10px",
+            }}
+          />
+
+          {/* Attendee UUID */}
+          <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.6rem", color: `${COLORS.GOLD_DIM}80`, marginBottom: "4px" }}>
+            Attendee UUID (from Supabase attendees table)
           </Text>
           <HStack gap={2}>
             <input
               value={testId}
               onChange={(e) => setTestId(e.target.value)}
-              placeholder="Attendee UUID from Supabase…"
+              placeholder="Paste attendee UUID…"
               style={{
                 flex: 1,
                 background: `${COLORS.PANEL_MID}60`,

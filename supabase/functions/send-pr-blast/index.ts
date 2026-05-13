@@ -159,8 +159,8 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}))
     const base_url: string = body.base_url ?? "https://busagreatgatbsy.vercel.app"
-    // Optional: pass dry_run: true to just return the list without sending
     const dry_run: boolean = body.dry_run ?? false
+    const override_email: string | null = body.override_email ?? null
 
     if (!GMAIL_APP_PASSWORD) {
       return new Response(
@@ -169,18 +169,41 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
 
-    // Fetch every confirmed attendee
+    // Fetch every attendee (manage_token is NOT NULL by schema)
     const { data: attendees, error: fetchErr } = await supabase
       .from("attendees")
       .select("id, first_name, last_name, email, manage_token")
-      .not("manage_token", "is", null)
+      .limit(500)
 
     if (fetchErr || !attendees || attendees.length === 0) {
       return new Response(
         JSON.stringify({ error: "No attendees found", details: fetchErr?.message }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
+    }
+
+    // Test mode: send only to override_email using the first attendee's data
+    if (override_email) {
+      const att = attendees[0]
+      const manage_url = `${base_url}/manage/${att.manage_token}`
+      const html = buildPREmailHtml({ first_name: att.first_name, manage_url })
+      const client = new SMTPClient({
+        connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: GMAIL_USER, password: GMAIL_APP_PASSWORD } },
+      })
+      await client.send({
+        from: FROM_EMAIL,
+        to: override_email,
+        subject: "10 Days to the Great Gatsby Gala ✨ — BUSA Awards Night [TEST]",
+        html,
+      })
+      await client.close()
+      return new Response(
+        JSON.stringify({ success: true, sent: 1, failed: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
 

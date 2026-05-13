@@ -188,8 +188,10 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}))
     const base_url: string = body.base_url ?? "https://busagreatgatbsy.vercel.app"
     const dry_run: boolean = body.dry_run ?? false
-    // Optionally target a single attendee by ID for testing
+    // Single attendee test mode
     const attendee_id: string | null = body.attendee_id ?? null
+    // Optional: override the recipient email (for test sends to your own inbox)
+    const override_email: string | null = body.override_email ?? null
 
     if (!GMAIL_APP_PASSWORD) {
       return new Response(
@@ -198,23 +200,24 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
 
-    // Build query — skip anyone who already got the QR email (unless single-target mode)
+    // Build query
     let query = supabase
       .from("attendees")
       .select(`
         id, first_name, last_name, email, ticket_id, manage_token, table_number,
         tier:ticket_tiers(name)
       `)
-      .not("manage_token", "is", null)
 
     if (attendee_id) {
       // Single-attendee mode (for test sends)
       query = query.eq("id", attendee_id)
     } else {
       // Bulk mode: only those who haven't received it yet
-      query = query.eq("qr_code_sent", false)
+      query = query.eq("qr_code_sent", false).limit(500)
     }
 
     const { data: attendees, error: fetchErr } = await query
@@ -271,17 +274,20 @@ Deno.serve(async (req: Request) => {
           },
         })
 
+        const recipient = override_email ?? att.email
         await client.send({
           from: FROM_EMAIL,
-          to: att.email,
-          subject: `✦ Your Entry QR Code — BUSA Great Gatsby Gala · ${tier_name} · Table ${att.table_number}`,
+          to: recipient,
+          subject: `✦ Your Entry QR Code — BUSA Great Gatsby Gala · ${tier_name} · Table ${att.table_number}${
+            override_email ? " [TEST]" : ""
+          }`,
           html,
         })
 
         await client.close()
 
-        // Mark as sent
-        await supabase
+        // Only mark as sent if this is a real send (not a test override)
+        if (!override_email) await supabase
           .from("attendees")
           .update({ qr_code_sent: true })
           .eq("id", att.id)
