@@ -137,7 +137,7 @@ export function QRBlastPanel() {
                 borderRadius: "3px",
               }}
             >
-              {isUnlocked ? "✓ SEND TODAY" : `IN ${daysUntil} DAY${daysUntil !== 1 ? "S" : ""} · 20 MAY"}
+              {isUnlocked ? "✓ SEND TODAY" : `IN ${daysUntil} DAY${daysUntil !== 1 ? "S" : ""} · 20 MAY`}
             </Badge>
           </HStack>
           <Text
