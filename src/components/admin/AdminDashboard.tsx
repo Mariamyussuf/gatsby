@@ -13,6 +13,8 @@ import { VVIPPickupManager } from "./VVIPPickupManager"
 import { WaitlistAdmin } from "./WaitlistAdmin"
 import { QRScanner } from "./QRScanner"
 import { ManualConfirmation } from "./ManualConfirmation"
+import { PRBlastPanel } from "./PRBlastPanel"
+import { QRBlastPanel } from "./QRBlastPanel"
 
 const tabs = [
   { value: "overview", label: "Overview" },
@@ -25,6 +27,7 @@ const tabs = [
   { value: "vvip", label: "VVIP Pickups" },
   { value: "waitlist", label: "Waitlist" },
   { value: "scanner", label: "QR Scanner" },
+  { value: "blast", label: "📣 Blast Email" },
 ]
 
 export function AdminDashboard() {
@@ -103,6 +106,14 @@ export function AdminDashboard() {
 
           <Tabs.Content value="scanner">
             <QRScanner />
+          </Tabs.Content>
+
+          <Tabs.Content value="blast">
+            <VStack gap={8} align="stretch">
+              <PRBlastPanel />
+              <Box w="100%" h="1px" style={{ background: `${COLORS.GOLD_DIM}20` }} />
+              <QRBlastPanel />
+            </VStack>
           </Tabs.Content>
         </Tabs.Root>
       </VStack>
