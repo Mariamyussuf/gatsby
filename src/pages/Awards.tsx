@@ -693,7 +693,7 @@ export default function AwardsPage() {
                 </Text>
               </VStack>
 
-              <FormField label="Full Name *" error={errors.name}>
+              <FormField label="Full Name / Nickname *" error={errors.name}>
                 <Input placeholder="e.g. Amara Okafor" value={nominator.name}
                   onChange={(e) => { setNominator({ ...nominator, name: e.target.value }); setErrors((p) => { const n = { ...p }; delete n.name; return n }) }}
                   {...inputStyles} />
@@ -769,7 +769,7 @@ export default function AwardsPage() {
                           {nom.description}
                         </Text>
                       )}
-                      <FormField label="Nominee's Full Name *" error={errors[`${group.type}_${i}`]}>
+                      <FormField label="Nominee's Full Name / Nickname *" error={errors[`${group.type}_${i}`]}>
                         <Input
                           placeholder="Who are you nominating?"
                           value={nom.nomineeName}
