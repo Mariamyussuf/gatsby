@@ -130,7 +130,7 @@ function buildPREmailHtml(params: {
 
     <p class="text" style="text-align:center; font-size:13px;">
       We've been building this night for you.<br/>
-      Show up, show out, and let's make history together. 🥂
+      Show up, show out, and let's make history together. Cheers!
     </p>
 
     <p class="text" style="text-align:center; font-size:12px; color:#6B5040;">
@@ -188,16 +188,17 @@ Deno.serve(async (req: Request) => {
 
     // Test mode: send only to override_email using the first attendee's data
     if (override_email) {
-      const att = attendees[0]
-      const manage_url = `${base_url}/manage/${att.manage_token}`
-      const html = buildPREmailHtml({ first_name: att.first_name, manage_url })
+      const html = buildPREmailHtml({
+        first_name: "Test Recipient",
+        manage_url: `${base_url}/manage/preview-test-link`,
+      })
       const client = new SMTPClient({
         connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: GMAIL_USER, password: GMAIL_APP_PASSWORD } },
       })
       await client.send({
         from: FROM_EMAIL,
         to: override_email,
-        subject: "10 Days to the Great Gatsby Gala ✨ — BUSA Awards Night [TEST]",
+        subject: "10 Days to the Great Gatsby Gala - BUSA Awards Night [TEST]",
         html,
       })
       await client.close()
@@ -240,7 +241,7 @@ Deno.serve(async (req: Request) => {
         await client.send({
           from: FROM_EMAIL,
           to: att.email,
-          subject: "10 Days to the Great Gatsby Gala ✨ — BUSA Awards Night",
+          subject: "10 Days to the Great Gatsby Gala - BUSA Awards Night",
           html,
         })
 
