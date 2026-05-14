@@ -35,6 +35,20 @@ interface Nomination {
 
 const MATRIC_REGEX = /^\d{4}\/\d{4,5}$/
 
+/**
+ * Converts a name to Title Case, handling edge cases like
+ * double spaces, hyphens, and apostrophes.
+ * e.g. "john doe" → "John Doe", "MARY-JANE" → "Mary-Jane",
+ *      "o'brien" → "O'Brien"
+ */
+function toTitleCase(str: string): string {
+  return str
+    .trim()
+    .replace(/\s+/g, " ")              // collapse multiple spaces
+    .toLowerCase()
+    .replace(/(?:^|[\s\-'])\S/g, (ch) => ch.toUpperCase())
+}
+
 const AWARD_GROUPS = [
   {
     type: "innovation",
@@ -430,10 +444,10 @@ export default function AwardsPage() {
         return {
           award_category_id: dbCat?.id ?? null,
           award_category_name: cleanCategoryName,
-          nominee_name: nom.nomineeName,
-          nominator_name: nominator.name,
-          nominator_email: nominator.email,
-          nominator_matric: nominator.matricNumber,
+          nominee_name: toTitleCase(nom.nomineeName),   // auto-normalise to Title Case
+          nominator_name: toTitleCase(nominator.name),   // normalise nominator too
+          nominator_email: nominator.email.trim().toLowerCase(),
+          nominator_matric: nominator.matricNumber.trim(),
           nominator_phone: nominator.phone || null,
         }
       })

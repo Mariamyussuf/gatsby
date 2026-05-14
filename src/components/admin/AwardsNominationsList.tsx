@@ -25,14 +25,40 @@ interface TallyEntry {
   count: number
 }
 
+/**
+ * Converts a name to Title Case for normalised display.
+ */
+function toTitleCase(str: string): string {
+  return str
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .replace(/(?:^|[\s\-'])\S/g, (ch) => ch.toUpperCase())
+}
+
+/**
+ * Builds a vote tally, merging case-insensitive variants of the same name.
+ * Picks the most-frequently-submitted casing for display; falls back to
+ * Title Case when all variants are unique.
+ */
 function buildTally(nominations: Nomination[]): TallyEntry[] {
-  const map: Record<string, number> = {}
+  // key = lowercased name → { total count, variant frequency map }
+  const map: Record<string, { total: number; variants: Record<string, number> }> = {}
+
   for (const nom of nominations) {
-    const key = (nom.nominee_name ?? "Unknown").trim()
-    map[key] = (map[key] ?? 0) + 1
+    const raw = (nom.nominee_name ?? "Unknown").trim()
+    const key = raw.toLowerCase()
+    if (!map[key]) map[key] = { total: 0, variants: {} }
+    map[key].total += 1
+    map[key].variants[raw] = (map[key].variants[raw] ?? 0) + 1
   }
-  return Object.entries(map)
-    .map(([name, count]) => ({ name, count }))
+
+  return Object.values(map)
+    .map(({ total, variants }) => {
+      // Pick the variant that was submitted the most; fall back to title case
+      const bestVariant = Object.entries(variants).sort((a, b) => b[1] - a[1])[0]?.[0]
+      return { name: bestVariant ?? toTitleCase(Object.keys(variants)[0] ?? "Unknown"), count: total }
+    })
     .sort((a, b) => b.count - a.count)
 }
 
