@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { Box, Text, VStack, Button } from "@chakra-ui/react"
+import { Box, Text, VStack, HStack, Button } from "@chakra-ui/react"
 import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 
@@ -13,6 +13,12 @@ type ScanResult = {
     table_number: number
     ticket_id: string
   }
+  /** Total tickets purchased in this transaction (party size) */
+  partySize?: number
+  /** How many in the party have already scanned in */
+  partyScannedCount?: number
+  /** Names of others in this party */
+  partyMembers?: { name: string; scanned: boolean }[]
 }
 
 export function QRScanner() {
@@ -63,6 +69,36 @@ export function QRScanner() {
     setScanning(false)
   }
 
+  /**
+   * Look up all attendees on the same transaction to determine party size
+   * and who has already been admitted.
+   */
+  const getPartyInfo = async (transactionId: string) => {
+    const { data: partyAttendees } = await supabase
+      .from("attendees")
+      .select("first_name, last_name, qr_used_at")
+      .eq("transaction_id", transactionId)
+
+    if (!partyAttendees) return { partySize: 1, partyScannedCount: 0, partyMembers: [] }
+
+    // Also look up the transaction for the authoritative quantity
+    // (in case attendee rows are missing)
+    const { data: txn } = await supabase
+      .from("transactions")
+      .select("quantity")
+      .eq("id", transactionId)
+      .maybeSingle()
+
+    const partySize = Math.max(txn?.quantity ?? partyAttendees.length, partyAttendees.length)
+    const partyScannedCount = partyAttendees.filter((a) => a.qr_used_at).length
+    const partyMembers = partyAttendees.map((a) => ({
+      name: `${a.first_name} ${a.last_name}`.trim(),
+      scanned: !!a.qr_used_at,
+    }))
+
+    return { partySize, partyScannedCount, partyMembers }
+  }
+
   const processQr = async (qrData: string) => {
     let ticketId = qrData
     try {
@@ -72,7 +108,7 @@ export function QRScanner() {
 
     const { data: attendee, error } = await supabase
       .from("attendees")
-      .select("id, first_name, last_name, table_number, ticket_id, qr_used_at, tier_id")
+      .select("id, first_name, last_name, table_number, ticket_id, qr_used_at, tier_id, transaction_id")
       .eq("ticket_id", ticketId)
       .maybeSingle()
 
@@ -89,6 +125,9 @@ export function QRScanner() {
 
     const tierName = tierData?.name ?? "Unknown"
 
+    // Fetch party info from the same transaction
+    const party = await getPartyInfo(attendee.transaction_id)
+
     if (attendee.qr_used_at) {
       setResult({
         valid: false,
@@ -100,6 +139,7 @@ export function QRScanner() {
           table_number: attendee.table_number,
           ticket_id: attendee.ticket_id,
         },
+        ...party,
       })
       return
     }
@@ -119,6 +159,14 @@ export function QRScanner() {
         table_number: attendee.table_number,
         ticket_id: attendee.ticket_id,
       },
+      // +1 because we just scanned this person
+      partySize: party.partySize,
+      partyScannedCount: party.partyScannedCount + 1,
+      partyMembers: party.partyMembers.map((m) =>
+        m.name === `${attendee.first_name} ${attendee.last_name}`.trim()
+          ? { ...m, scanned: true }
+          : m
+      ),
     })
   }
 
@@ -284,6 +332,79 @@ export function QRScanner() {
             >
               {result.message}
             </Text>
+
+            {/* ── Party Size Banner ── */}
+            {result.valid && result.partySize && result.partySize > 1 && (
+              <Box
+                w="100%"
+                p="4"
+                style={{
+                  background: `linear-gradient(135deg, ${COLORS.GOLD_BASE}20, ${COLORS.GOLD_GLOW}10)`,
+                  border: `2px solid ${COLORS.GOLD_BASE}`,
+                  borderRadius: "6px",
+                  textAlign: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.55rem",
+                    letterSpacing: "0.3em",
+                    color: COLORS.GOLD_DIM,
+                    textTransform: "uppercase",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Party Size
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: "2.5rem",
+                    fontWeight: "700",
+                    color: COLORS.GOLD_BRIGHT,
+                    lineHeight: 1,
+                  }}
+                >
+                  ADMIT {result.partySize}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.6rem",
+                    color: COLORS.GOLD_DIM,
+                    marginTop: "6px",
+                  }}
+                >
+                  {result.partyScannedCount} of {result.partySize} scanned in
+                </Text>
+              </Box>
+            )}
+
+            {/* ── "Already scanned" party info ── */}
+            {!result.valid && result.partySize && result.partySize > 1 && (
+              <Box
+                w="100%"
+                p="3"
+                style={{
+                  background: `${COLORS.GOLD_BASE}08`,
+                  border: `1px solid ${COLORS.GOLD_DIM}30`,
+                  borderRadius: "4px",
+                  textAlign: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.6rem",
+                    color: COLORS.GOLD_DIM,
+                  }}
+                >
+                  Party of {result.partySize} · {result.partyScannedCount} already scanned
+                </Text>
+              </Box>
+            )}
+
             {result.attendee && (
               <VStack gap="1" textAlign="center">
                 <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.8rem", color: COLORS.GOLD_BASE }}>
@@ -296,6 +417,57 @@ export function QRScanner() {
                   {result.attendee.ticket_id}
                 </Text>
               </VStack>
+            )}
+
+            {/* ── Party Members List ── */}
+            {result.partyMembers && result.partyMembers.length > 1 && (
+              <Box w="100%" mt="2">
+                <Text
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: "0.5rem",
+                    letterSpacing: "0.2em",
+                    color: `${COLORS.GOLD_DIM}80`,
+                    textTransform: "uppercase",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Group Members
+                </Text>
+                <VStack gap="1" align="stretch">
+                  {result.partyMembers.map((member, i) => (
+                    <HStack
+                      key={i}
+                      justify="space-between"
+                      p="2"
+                      style={{
+                        borderLeft: `2px solid ${member.scanned ? "#22c55e" : COLORS.GOLD_DIM}40`,
+                        background: member.scanned ? "#22c55e08" : "transparent",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: "'Josefin Sans', sans-serif",
+                          fontSize: "0.7rem",
+                          color: member.scanned ? "#22c55e" : COLORS.GOLD_DIM,
+                        }}
+                      >
+                        {member.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: "'Josefin Sans', sans-serif",
+                          fontSize: "0.55rem",
+                          color: member.scanned ? "#22c55e" : `${COLORS.GOLD_DIM}60`,
+                          letterSpacing: "0.1em",
+                        }}
+                      >
+                        {member.scanned ? "✓ IN" : "PENDING"}
+                      </Text>
+                    </HStack>
+                  ))}
+                </VStack>
+              </Box>
             )}
           </VStack>
         </Box>
