@@ -421,6 +421,12 @@ export default function AwardsPage() {
         const dbCat = dbCategories.find(
           (c) => c.name.toLowerCase().trim() === cleanCategoryName.toLowerCase().trim()
         )
+        if (!dbCat) {
+          console.warn(
+            `[Awards] No DB category match for "${cleanCategoryName}". ` +
+            `Available DB categories: ${dbCategories.map((c) => `"${c.name}"`).join(", ")}`
+          )
+        }
         return {
           award_category_id: dbCat?.id ?? null,
           award_category_name: cleanCategoryName,
@@ -432,7 +438,24 @@ export default function AwardsPage() {
         }
       })
 
-      const { error } = await supabase.from("award_nominations").insert(inserts)
+      // Filter out nominations that couldn't be matched to a DB category
+      const validInserts = inserts.filter((row) => row.award_category_id !== null)
+
+      if (validInserts.length === 0) {
+        throw new Error(
+          "None of the award categories matched the database. " +
+          "Please check that the award_categories table has matching entries."
+        )
+      }
+
+      if (validInserts.length < inserts.length) {
+        console.warn(
+          `[Awards] ${inserts.length - validInserts.length} nomination(s) skipped ` +
+          `due to missing DB categories.`
+        )
+      }
+
+      const { error } = await supabase.from("award_nominations").insert(validInserts)
       if (error) throw error
       setSubmitted(true)
       window.scrollTo({ top: 0, behavior: "smooth" })

@@ -296,6 +296,7 @@ export function AwardsNominationsList() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [uniqueNominatorCount, setUniqueNominatorCount] = useState(0)
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -312,6 +313,12 @@ export function AwardsNominationsList() {
         .order("created_at", { ascending: false })
 
       if (categories && allNominations) {
+        // Count unique nominators (by matric number)
+        const uniqueNominators = new Set(
+          allNominations.map((n) => (n as Record<string, unknown>).nominator_matric).filter(Boolean)
+        )
+        setUniqueNominatorCount(uniqueNominators.size)
+
         const grouped = categories.map((cat) => ({
           category: cat,
           nominations: allNominations.filter((n) => n.award_category_id === cat.id),
@@ -338,7 +345,7 @@ export function AwardsNominationsList() {
     sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
-  const totalNominations = nominations.reduce((s, n) => s + n.count, 0)
+  const totalNominations = uniqueNominatorCount
 
   if (isLoading) {
     return (
@@ -373,7 +380,7 @@ export function AwardsNominationsList() {
               marginBottom: "2px",
             }}
           >
-            Total Nominations
+            Total Nominators
           </Text>
           <Text
             style={{
