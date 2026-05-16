@@ -388,6 +388,32 @@ export function AwardsNominationsList() {
   const totalNominations = uniqueNominatorCount
   const totalRows = totalNominationCount
 
+  const [resetMatric, setResetMatric] = useState("")
+  const [resetStatus, setResetStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [resetMessage, setResetMessage] = useState("")
+
+  const resetMatricEntry = async () => {
+    const matric = resetMatric.trim()
+    if (!matric) return
+    setResetStatus("loading")
+    setResetMessage("")
+    try {
+      const { error, count } = await supabase
+        .from("award_nominations")
+        .delete({ count: "exact" })
+        .eq("nominator_matric", matric)
+      if (error) throw error
+      setResetStatus("success")
+      setResetMessage(`Cleared ${count ?? 0} nomination row(s) for ${matric}. They can now re-submit.`)
+      setResetMatric("")
+      fetchNominations()
+    } catch (err) {
+      console.error(err)
+      setResetStatus("error")
+      setResetMessage("Delete failed. Check the console for details.")
+    }
+  }
+
   const exportCSV = () => {
     if (allNominations.length === 0) return
     const headers = [
@@ -535,6 +561,83 @@ export function AwardsNominationsList() {
         >
           ↓ Export All CSV
         </Button>
+
+        {/* Reset Matric */}
+        <Box
+          mb="4"
+          pb="4"
+          style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}20` }}
+        >
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.55rem",
+              letterSpacing: "0.2em",
+              color: `${COLORS.GOLD_DIM}90`,
+              textTransform: "uppercase",
+              marginBottom: "6px",
+            }}
+          >
+            Reset a Matric
+          </Text>
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.58rem",
+              color: `${COLORS.GOLD_DIM}70`,
+              marginBottom: "8px",
+              lineHeight: 1.5,
+            }}
+          >
+            Deletes all nominations for a matric so they can re-submit.
+          </Text>
+          <Input
+            placeholder="e.g. 2023/12782"
+            value={resetMatric}
+            onChange={(e) => { setResetMatric(e.target.value); setResetStatus("idle"); setResetMessage("") }}
+            size="sm"
+            style={{
+              background: `${COLORS.BG}80`,
+              border: `1px solid ${COLORS.GOLD_DIM}40`,
+              color: COLORS.GOLD_BRIGHT,
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.7rem",
+              marginBottom: "6px",
+              borderRadius: "4px",
+            }}
+          />
+          <Button
+            onClick={resetMatricEntry}
+            size="sm"
+            width="100%"
+            disabled={!resetMatric.trim() || resetStatus === "loading"}
+            style={{
+              background: resetStatus === "success" ? `${COLORS.GOLD_DIM}20` : `#8B000020`,
+              border: `1px solid ${resetStatus === "success" ? COLORS.GOLD_DIM : "#cc333360"}`,
+              color: resetStatus === "success" ? COLORS.GOLD_DIM : "#ff6666",
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.55rem",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            {resetStatus === "loading" ? "Clearing..." : "✕ Clear & Allow Re-vote"}
+          </Button>
+          {resetMessage && (
+            <Text
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.58rem",
+                color: resetStatus === "success" ? COLORS.GOLD_DIM : "#ff6666",
+                marginTop: "6px",
+                lineHeight: 1.5,
+              }}
+            >
+              {resetMessage}
+            </Text>
+          )}
+        </Box>
 
         {/* Category nav links */}
         <Text

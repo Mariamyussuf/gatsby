@@ -280,6 +280,30 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           ))}
         </VStack>
 
+        {/* Re-submission notice */}
+        <Box
+          w="100%"
+          border={`1px solid ${COLORS.GOLD_DIM}30`}
+          borderLeft={`2px solid ${COLORS.GOLD_BASE}80`}
+          borderRadius="2px"
+          px={4}
+          py={3}
+          bg={`${COLORS.GOLD_GLOW}08`}
+          style={{
+            opacity: visible ? 1 : 0,
+            transition: "opacity 0.6s ease 1.4s",
+          }}
+        >
+          <Text color={COLORS.GOLD_DIM} fontSize="10px" letterSpacing="2px" textTransform="uppercase" mb={1}>
+            ⚠ Notice
+          </Text>
+          <Text color={`${COLORS.GOLD_DIM}90`} fontSize="xs" lineHeight="1.8" textAlign="left">
+            Due to a technical issue, some nominations submitted before{" "}
+            <Text as="span" color={COLORS.GOLD_BASE}>May 14th</Text> may have been lost.
+            If you submitted before then, please nominate again — your matric number will work.
+          </Text>
+        </Box>
+
         <Button
           onClick={onBegin}
           bg="transparent"
