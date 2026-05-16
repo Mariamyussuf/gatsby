@@ -240,7 +240,7 @@ function CategoryCard({
           >
             Votes
           </Text>
-          <NomineeBarChart nominations={data.nominations} />
+          <NomineeBarChart nominations={data.nominations} serverTallies={data.serverTallies} />
         </Box>
 
         {/* Separator */}
