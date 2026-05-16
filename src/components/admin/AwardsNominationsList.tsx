@@ -779,7 +779,7 @@ export function AwardsNominationsList() {
             >
               <Box as="thead">
                 <Box as="tr">
-                  {["#","Category","Nominee","Nominator","Matric","Email","Date"].map((h) => (
+                  {["#","Category","Nominee","Nominator","Matric","Date"].map((h) => (
                     <Box as="th" key={h} style={{
                       padding: "8px 12px", textAlign: "left",
                       color: COLORS.GOLD_DIM, letterSpacing: "0.15em",
@@ -809,9 +809,6 @@ export function AwardsNominationsList() {
                     </Box>
                     <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}80`, whiteSpace: "nowrap" }}>
                       {String((n as Record<string, unknown>).nominator_matric ?? "")}
-                    </Box>
-                    <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}70`, whiteSpace: "nowrap" }}>
-                      {String(n.nominator_email ?? "")}
                     </Box>
                     <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}60`, whiteSpace: "nowrap" }}>
                       {new Date(n.created_at ?? "").toLocaleDateString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}
