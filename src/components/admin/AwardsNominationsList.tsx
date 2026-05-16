@@ -18,6 +18,7 @@ interface CategoryNominations {
   category: AwardCategory
   nominations: Nomination[]
   count: number
+  serverTallies?: { nominee_name: string; vote_count: number }[]
 }
 
 interface TallyEntry {
@@ -63,8 +64,18 @@ function buildTally(nominations: Nomination[]): TallyEntry[] {
 }
 
 // ── Bar Chart ──────────────────────────────────────────────────────────────
-function NomineeBarChart({ nominations }: { nominations: Nomination[] }) {
-  const tally = buildTally(nominations)
+function NomineeBarChart({
+  nominations,
+  serverTallies,
+}: {
+  nominations: Nomination[]
+  serverTallies?: { nominee_name: string; vote_count: number }[]
+}) {
+  // Prefer server-side tallies (full dataset) over client-side calculation (capped)
+  const tally: TallyEntry[] = serverTallies && serverTallies.length > 0
+    ? serverTallies.map((t) => ({ name: t.nominee_name, count: Number(t.vote_count) }))
+    : buildTally(nominations)
+
   if (tally.length === 0) {
     return (
       <Text
@@ -117,27 +128,15 @@ function NomineeBarChart({ nominations }: { nominations: Nomination[] }) {
               </Text>
             </HStack>
             {/* Track */}
-            <Box
-              w="100%"
-              h="6px"
-              style={{
-                background: `${COLORS.GOLD_DIM}18`,
+            <Box w="100%" h="6px" style={{ background: `${COLORS.GOLD_DIM}18`, borderRadius: "3px", overflow: "hidden" }}>
+              <Box h="100%" style={{
+                width: `${pct}%`,
+                background: isTop
+                  ? `linear-gradient(90deg, ${COLORS.GOLD_BASE}, ${COLORS.GOLD_BRIGHT})`
+                  : `${COLORS.GOLD_DIM}60`,
                 borderRadius: "3px",
-                overflow: "hidden",
-              }}
-            >
-              {/* Fill */}
-              <Box
-                h="100%"
-                style={{
-                  width: `${pct}%`,
-                  background: isTop
-                    ? `linear-gradient(90deg, ${COLORS.GOLD_BASE}, ${COLORS.GOLD_BRIGHT})`
-                    : `${COLORS.GOLD_DIM}60`,
-                  borderRadius: "3px",
-                  transition: "width 0.6s ease",
-                }}
-              />
+                transition: "width 0.6s ease",
+              }} />
             </Box>
           </Box>
         )
@@ -365,14 +364,15 @@ export function AwardsNominationsList() {
         const grouped = categories.map((cat) => {
           const catTallies = (tallies ?? []).filter(
             (t: Record<string, unknown>) => t.category_id === cat.id
-          )
+          ) as { nominee_name: string; vote_count: number }[]
           const serverCount = catTallies.reduce(
-            (sum: number, t: Record<string, unknown>) => sum + Number(t.vote_count ?? 0), 0
+            (sum: number, t) => sum + Number(t.vote_count ?? 0), 0
           )
           return {
             category: cat,
             nominations: allNominations.filter((n) => n.award_category_id === cat.id),
             count: serverCount || allNominations.filter((n) => n.award_category_id === cat.id).length,
+            serverTallies: catTallies,
           }
         })
         setNominations(grouped)
