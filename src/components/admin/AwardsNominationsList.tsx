@@ -319,6 +319,7 @@ function CategoryCard({
 // ── Main Component ──────────────────────────────────────────────────────────
 export function AwardsNominationsList() {
   const [nominations, setNominations] = useState<CategoryNominations[]>([])
+  const [allNominations, setAllNominations] = useState<Nomination[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -341,6 +342,9 @@ export function AwardsNominationsList() {
         .limit(10000) // Supabase PostgREST defaults to 1000 rows — raise cap
 
       if (categories && allNominations) {
+        // Store flat list for export
+        setAllNominations(allNominations)
+
         // Count total nomination rows
         setTotalNominationCount(allNominations.length)
 
@@ -379,6 +383,42 @@ export function AwardsNominationsList() {
   const totalNominations = uniqueNominatorCount
   const totalRows = totalNominationCount
 
+  const exportCSV = () => {
+    if (allNominations.length === 0) return
+    const headers = [
+      "Award Category",
+      "Nominee Name",
+      "Nominator Name",
+      "Nominator Matric",
+      "Nominator Email",
+      "Nominator Phone",
+      "Submitted At",
+    ]
+    const escape = (v: unknown) => {
+      const s = String(v ?? "")
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s
+    }
+    const rows = allNominations.map((n) => [
+      escape((n as Record<string, unknown>).award_category_name ?? ""),
+      escape(n.nominee_name ?? ""),
+      escape(n.nominator_name ?? ""),
+      escape((n as Record<string, unknown>).nominator_matric ?? ""),
+      escape(n.nominator_email ?? ""),
+      escape(n.nominator_phone ?? ""),
+      escape(n.created_at ?? ""),
+    ].join(","))
+    const csv = [headers.join(","), ...rows].join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `busa-nominations-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (isLoading) {
     return (
       <VStack justify="center" align="center" gap="4" minH="400px">
@@ -412,7 +452,7 @@ export function AwardsNominationsList() {
               marginBottom: "2px",
             }}
           >
-            Unique Nominators
+            Total Nominations
           </Text>
           <Text
             style={{
@@ -423,7 +463,7 @@ export function AwardsNominationsList() {
               lineHeight: 1,
             }}
           >
-            {totalNominations}
+            {totalRows}
           </Text>
           <Text
             style={{
@@ -436,7 +476,7 @@ export function AwardsNominationsList() {
               marginBottom: "2px",
             }}
           >
-            Total Nomination Rows
+            Unique Nominators
           </Text>
           <Text
             style={{
@@ -447,7 +487,7 @@ export function AwardsNominationsList() {
               lineHeight: 1,
             }}
           >
-            {totalRows}
+            {totalNominations}
           </Text>
         </Box>
 
@@ -456,7 +496,7 @@ export function AwardsNominationsList() {
           onClick={fetchNominations}
           size="sm"
           width="100%"
-          mb="4"
+          mb="2"
           style={{
             background: `${COLORS.GOLD_BASE}18`,
             border: `1px solid ${COLORS.GOLD_DIM}40`,
@@ -469,6 +509,26 @@ export function AwardsNominationsList() {
           }}
         >
           ↺ Refresh
+        </Button>
+
+        {/* Export CSV */}
+        <Button
+          onClick={exportCSV}
+          size="sm"
+          width="100%"
+          mb="4"
+          style={{
+            background: `${COLORS.GOLD_BASE}28`,
+            border: `1px solid ${COLORS.GOLD_BASE}60`,
+            color: COLORS.GOLD_BRIGHT,
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: "0.55rem",
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+          }}
+        >
+          ↓ Export All CSV
         </Button>
 
         {/* Category nav links */}
