@@ -340,8 +340,11 @@ export function AwardsNominationsList() {
         .from("award_nominations")
         .select("*", { count: "exact", head: true })
 
-      // Fetch ONLY the matric column (lightweight) to count distinct nominators accurately
+      // Server-side unique nominator count
       const { data: uniqueCountResult } = await supabase.rpc("get_unique_nominator_count")
+
+      // Server-side per-category tallies (bypasses Max Rows cap)
+      const { data: tallies } = await supabase.rpc("get_nomination_tallies")
 
       const { data: allNominations } = await supabase
         .from("award_nominations")
@@ -359,11 +362,19 @@ export function AwardsNominationsList() {
         // Count unique nominators from server-side RPC (bypasses all row limits)
         setUniqueNominatorCount(Number(uniqueCountResult ?? 0))
 
-        const grouped = categories.map((cat) => ({
-          category: cat,
-          nominations: allNominations.filter((n) => n.award_category_id === cat.id),
-          count: allNominations.filter((n) => n.award_category_id === cat.id).length,
-        }))
+        const grouped = categories.map((cat) => {
+          const catTallies = (tallies ?? []).filter(
+            (t: Record<string, unknown>) => t.category_id === cat.id
+          )
+          const serverCount = catTallies.reduce(
+            (sum: number, t: Record<string, unknown>) => sum + Number(t.vote_count ?? 0), 0
+          )
+          return {
+            category: cat,
+            nominations: allNominations.filter((n) => n.award_category_id === cat.id),
+            count: serverCount || allNominations.filter((n) => n.award_category_id === cat.id).length,
+          }
+        })
         setNominations(grouped)
         if (!activeId && grouped.length > 0) setActiveId(grouped[0].category.id)
       }
