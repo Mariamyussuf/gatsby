@@ -362,12 +362,12 @@ export function AwardsNominationsList() {
         setUniqueNominatorCount(Number(uniqueCountResult ?? 0))
 
         const grouped = categories.map((cat) => {
-          const catTallies = (tallies ?? []).filter(
+          // New RPC returns one row per category with tallies as JSON array
+          const catRow = (tallies ?? []).find(
             (t: Record<string, unknown>) => t.category_id === cat.id
-          ) as { nominee_name: string; vote_count: number }[]
-          const serverCount = catTallies.reduce(
-            (sum: number, t) => sum + Number(t.vote_count ?? 0), 0
-          )
+          ) as { category_id: string; tallies: { nominee_name: string; vote_count: number }[] } | undefined
+          const catTallies = catRow?.tallies ?? []
+          const serverCount = catTallies.reduce((sum, t) => sum + Number(t.vote_count ?? 0), 0)
           return {
             category: cat,
             nominations: allNominations.filter((n) => n.award_category_id === cat.id),
