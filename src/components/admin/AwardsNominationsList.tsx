@@ -323,6 +323,7 @@ export function AwardsNominationsList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeId, setActiveId] = useState<string | null>(null)
   const [uniqueNominatorCount, setUniqueNominatorCount] = useState(0)
+  const [totalNominationCount, setTotalNominationCount] = useState(0)
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -337,8 +338,12 @@ export function AwardsNominationsList() {
         .from("award_nominations")
         .select("*")
         .order("created_at", { ascending: false })
+        .limit(10000) // Supabase PostgREST defaults to 1000 rows — raise cap
 
       if (categories && allNominations) {
+        // Count total nomination rows
+        setTotalNominationCount(allNominations.length)
+
         // Count unique nominators (by matric number)
         const uniqueNominators = new Set(
           allNominations.map((n) => (n as Record<string, unknown>).nominator_matric).filter(Boolean)
@@ -372,6 +377,7 @@ export function AwardsNominationsList() {
   }
 
   const totalNominations = uniqueNominatorCount
+  const totalRows = totalNominationCount
 
   if (isLoading) {
     return (
@@ -394,7 +400,7 @@ export function AwardsNominationsList() {
           borderRight: `1px solid ${COLORS.GOLD_DIM}25`,
         }}
       >
-        {/* Total */}
+        {/* Totals */}
         <Box mb="4" pb="3" style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}20` }}>
           <Text
             style={{
@@ -406,7 +412,7 @@ export function AwardsNominationsList() {
               marginBottom: "2px",
             }}
           >
-            Total Nominators
+            Unique Nominators
           </Text>
           <Text
             style={{
@@ -418,6 +424,30 @@ export function AwardsNominationsList() {
             }}
           >
             {totalNominations}
+          </Text>
+          <Text
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.55rem",
+              letterSpacing: "0.2em",
+              color: `${COLORS.GOLD_DIM}80`,
+              textTransform: "uppercase",
+              marginTop: "8px",
+              marginBottom: "2px",
+            }}
+          >
+            Total Nomination Rows
+          </Text>
+          <Text
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "1.4rem",
+              fontWeight: "600",
+              color: COLORS.GOLD_DIM,
+              lineHeight: 1,
+            }}
+          >
+            {totalRows}
           </Text>
         </Box>
 
