@@ -341,10 +341,7 @@ export function AwardsNominationsList() {
         .select("*", { count: "exact", head: true })
 
       // Fetch ONLY the matric column (lightweight) to count distinct nominators accurately
-      const { data: matricRows } = await supabase
-        .from("award_nominations")
-        .select("nominator_matric")
-        .limit(50000)
+      const { data: uniqueCountResult } = await supabase.rpc("get_unique_nominator_count")
 
       const { data: allNominations } = await supabase
         .from("award_nominations")
@@ -359,11 +356,8 @@ export function AwardsNominationsList() {
         // Use the server-returned exact count (not affected by client row limit)
         setTotalNominationCount(exactCount ?? allNominations.length)
 
-        // Count unique nominators from the dedicated matric-only fetch (accurate, no row limit issue)
-        const uniqueNominators = new Set(
-          (matricRows ?? allNominations).map((n) => (n as Record<string, unknown>).nominator_matric).filter(Boolean)
-        )
-        setUniqueNominatorCount(uniqueNominators.size)
+        // Count unique nominators from server-side RPC (bypasses all row limits)
+        setUniqueNominatorCount(Number(uniqueCountResult ?? 0))
 
         const grouped = categories.map((cat) => ({
           category: cat,
