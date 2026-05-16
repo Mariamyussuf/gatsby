@@ -388,6 +388,7 @@ export function AwardsNominationsList() {
   const totalNominations = uniqueNominatorCount
   const totalRows = totalNominationCount
 
+  const [viewMode, setViewMode] = useState<"category" | "table">("category")
   const [resetMatric, setResetMatric] = useState("")
   const [resetStatus, setResetStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [resetMessage, setResetMessage] = useState("")
@@ -457,6 +458,17 @@ export function AwardsNominationsList() {
       </VStack>
     )
   }
+
+  const flatFiltered = allNominations.filter((n) => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      n.nominee_name?.toLowerCase().includes(q) ||
+      n.nominator_name?.toLowerCase().includes(q) ||
+      ((n as Record<string, unknown>).nominator_matric as string)?.toLowerCase().includes(q) ||
+      ((n as Record<string, unknown>).award_category_name as string)?.toLowerCase().includes(q)
+    )
+  })
 
   return (
     <HStack align="start" gap="0" height="calc(100vh - 180px)" overflow="hidden">
@@ -697,10 +709,45 @@ export function AwardsNominationsList() {
 
       {/* ── RIGHT CONTENT ─────────────────────────────────────── */}
       <Box flex="1" height="100%" overflowY="auto" pl="5" pr="1">
-        {/* Search */}
-        <Box mb="4">
+
+        {/* View Toggle + Search */}
+        <HStack mb="4" gap="2">
+          <Button
+            onClick={() => setViewMode("category")}
+            size="sm"
+            style={{
+              background: viewMode === "category" ? `${COLORS.GOLD_BASE}30` : "transparent",
+              border: `1px solid ${viewMode === "category" ? COLORS.GOLD_BASE : `${COLORS.GOLD_DIM}40`}`,
+              color: viewMode === "category" ? COLORS.GOLD_BRIGHT : COLORS.GOLD_DIM,
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.55rem",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            ≡ By Category
+          </Button>
+          <Button
+            onClick={() => setViewMode("table")}
+            size="sm"
+            style={{
+              background: viewMode === "table" ? `${COLORS.GOLD_BASE}30` : "transparent",
+              border: `1px solid ${viewMode === "table" ? COLORS.GOLD_BASE : `${COLORS.GOLD_DIM}40`}`,
+              color: viewMode === "table" ? COLORS.GOLD_BRIGHT : COLORS.GOLD_DIM,
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.55rem",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            ⊞ All Nominations
+          </Button>
           <Input
-            placeholder="Search by nominee or nominator…"
+            placeholder="Search nominee, nominator, matric, category…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -708,16 +755,75 @@ export function AwardsNominationsList() {
               border: `1px solid ${COLORS.GOLD_DIM}40`,
               color: COLORS.TEXT,
               fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: "0.82rem",
-              padding: "8px 12px",
+              fontSize: "0.75rem",
+              padding: "6px 12px",
               borderRadius: "4px",
               width: "100%",
             }}
           />
-        </Box>
+        </HStack>
 
-        {/* One card per category */}
-        {nominations.map((n) => (
+        {/* ── FLAT TABLE VIEW ── */}
+        {viewMode === "table" && (
+          <Box overflowX="auto">
+            <Box
+              as="table"
+              width="100%"
+              style={{ borderCollapse: "collapse", fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.7rem" }}
+            >
+              <Box as="thead">
+                <Box as="tr">
+                  {["#","Category","Nominee","Nominator","Matric","Email","Date"].map((h) => (
+                    <Box as="th" key={h} style={{
+                      padding: "8px 12px", textAlign: "left",
+                      color: COLORS.GOLD_DIM, letterSpacing: "0.15em",
+                      textTransform: "uppercase", fontSize: "0.55rem",
+                      borderBottom: `1px solid ${COLORS.GOLD_DIM}30`,
+                      whiteSpace: "nowrap",
+                      background: `${COLORS.PANEL_DARK}40`,
+                      position: "sticky", top: 0,
+                    }}>
+                      {h}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+              <Box as="tbody">
+                {flatFiltered.map((n, i) => (
+                  <Box as="tr" key={n.id} style={{ background: i % 2 === 0 ? "transparent" : `${COLORS.GOLD_DIM}06` }}>
+                    <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}50`, whiteSpace: "nowrap" }}>{i + 1}</Box>
+                    <Box as="td" style={{ padding: "6px 12px", color: COLORS.GOLD_DIM, whiteSpace: "nowrap" }}>
+                      {String((n as Record<string, unknown>).award_category_name ?? "")}
+                    </Box>
+                    <Box as="td" style={{ padding: "6px 12px", color: COLORS.GOLD_BRIGHT, fontWeight: 600 }}>
+                      {String(n.nominee_name ?? "")}
+                    </Box>
+                    <Box as="td" style={{ padding: "6px 12px", color: COLORS.GOLD_DIM }}>
+                      {String(n.nominator_name ?? "")}
+                    </Box>
+                    <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}80`, whiteSpace: "nowrap" }}>
+                      {String((n as Record<string, unknown>).nominator_matric ?? "")}
+                    </Box>
+                    <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}70`, whiteSpace: "nowrap" }}>
+                      {String(n.nominator_email ?? "")}
+                    </Box>
+                    <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}60`, whiteSpace: "nowrap" }}>
+                      {new Date(n.created_at ?? "").toLocaleDateString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            {flatFiltered.length === 0 && (
+              <Text style={{ color: `${COLORS.GOLD_DIM}60`, fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.75rem", padding: "24px", textAlign: "center" }}>
+                No nominations found
+              </Text>
+            )}
+          </Box>
+        )}
+
+        {/* ── CATEGORY VIEW ── */}
+        {viewMode === "category" && nominations.map((n) => (
           <CategoryCard
             key={n.category.id}
             data={n}
