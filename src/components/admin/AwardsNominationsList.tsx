@@ -335,18 +335,23 @@ export function AwardsNominationsList() {
         .select("*")
         .order("display_order", { ascending: true })
 
+      // Get the TRUE total count from Supabase (server-side, unaffected by row limits)
+      const { count: exactCount } = await supabase
+        .from("award_nominations")
+        .select("*", { count: "exact", head: true })
+
       const { data: allNominations } = await supabase
         .from("award_nominations")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(10000) // Supabase PostgREST defaults to 1000 rows — raise cap
+        .limit(10000) // raise client fetch cap above PostgREST default of 1000
 
       if (categories && allNominations) {
         // Store flat list for export
         setAllNominations(allNominations)
 
-        // Count total nomination rows
-        setTotalNominationCount(allNominations.length)
+        // Use the server-returned exact count (not affected by client row limit)
+        setTotalNominationCount(exactCount ?? allNominations.length)
 
         // Count unique nominators (by matric number)
         const uniqueNominators = new Set(
