@@ -166,7 +166,7 @@ export function AdminDashboard({ role }: { role: AdminRole }) {
   const safActiveTab = tabs.find((t) => t.value === activeTab) ? activeTab : "overview"
 
   return (
-    <Box bg={COLORS.BG} minH="100vh" p={6}>
+    <Box bg={COLORS.BG} minH="100vh" p={{ base: 3, md: 6 }}>
       <VStack spacing={6} align="stretch">
         <Heading as="h1" size="2xl" color={COLORS.GOLD_BASE}>
           Admin Dashboard
@@ -189,7 +189,11 @@ export function AdminDashboard({ role }: { role: AdminRole }) {
         </Heading>
 
         <Tabs.Root value={safActiveTab} onValueChange={(e) => setActiveTab(e.value)}>
-          <Tabs.List borderBottom={`2px solid ${COLORS.GOLD_BASE}`} mb={6}>
+          <Tabs.List
+            borderBottom={`2px solid ${COLORS.GOLD_BASE}`}
+            mb={6}
+            style={{ overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}
+          >
             {tabs.map(({ value, label }) => (
               <Tabs.Trigger
                 key={value}
@@ -244,7 +248,7 @@ export function AdminDashboard({ role }: { role: AdminRole }) {
           )}
 
           <Tabs.Content value="awards">
-            <AwardsNominationsList />
+            <AwardsNominationsList hideMatric={isExco} />
           </Tabs.Content>
 
           {!isExco && (

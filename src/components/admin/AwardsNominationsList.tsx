@@ -11,6 +11,18 @@ import { supabase } from "@/lib/supabase"
 import { COLORS } from "@/config/constants"
 import type { Database } from "@/lib/supabase"
 
+/** Simple hook that returns true when viewport width < 640px */
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 640)
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)")
+    const handler = (e: MediaQueryListEvent) => setMobile(e.matches)
+    mq.addEventListener("change", handler)
+    return () => mq.removeEventListener("change", handler)
+  }, [])
+  return mobile
+}
+
 type AwardCategory = Database["public"]["Tables"]["award_categories"]["Row"]
 type Nomination = Database["public"]["Tables"]["award_nominations"]["Row"]
 
@@ -150,10 +162,12 @@ function CategoryCard({
   data,
   searchQuery,
   sectionRef,
+  isMobile,
 }: {
   data: CategoryNominations
   searchQuery: string
   sectionRef: (el: HTMLDivElement | null) => void
+  isMobile: boolean
 }) {
   const filtered = data.nominations.filter(
     (nom) =>
@@ -165,7 +179,7 @@ function CategoryCard({
   return (
     <Box
       ref={sectionRef}
-      p="6"
+      p={isMobile ? "4" : "6"}
       mb="4"
       style={{
         border: `1px solid ${COLORS.GOLD_DIM}35`,
@@ -180,7 +194,7 @@ function CategoryCard({
           <Text
             style={{
               fontFamily: "'Cormorant Garamond', serif",
-              fontSize: "1.15rem",
+              fontSize: isMobile ? "1rem" : "1.15rem",
               fontWeight: "600",
               color: COLORS.GOLD_BRIGHT,
               letterSpacing: "0.5px",
@@ -224,10 +238,17 @@ function CategoryCard({
         </Box>
       </HStack>
 
-      {/* Two-column: bar chart + nominee list */}
-      <HStack gap="6" align="start">
+      {/* Two-column on desktop, stacked on mobile */}
+      <Box
+        style={{
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? "20px" : "24px",
+          alignItems: "flex-start",
+        }}
+      >
         {/* Bar Chart */}
-        <Box flex="1" minW="0">
+        <Box style={{ flex: 1, minWidth: 0, width: "100%" }}>
           <Text
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
@@ -244,14 +265,17 @@ function CategoryCard({
         </Box>
 
         {/* Separator */}
-        <Box
-          w="1px"
-          alignSelf="stretch"
-          style={{ background: `${COLORS.GOLD_DIM}20`, flexShrink: 0 }}
-        />
+        {!isMobile && (
+          <Box
+            style={{ width: "1px", alignSelf: "stretch", background: `${COLORS.GOLD_DIM}20`, flexShrink: 0 }}
+          />
+        )}
+        {isMobile && (
+          <Box style={{ width: "100%", height: "1px", background: `${COLORS.GOLD_DIM}20` }} />
+        )}
 
         {/* Nomination entries */}
-        <Box flex="1" minW="0">
+        <Box style={{ flex: 1, minWidth: 0, width: "100%" }}>
           <Text
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
@@ -310,13 +334,14 @@ function CategoryCard({
             </VStack>
           )}
         </Box>
-      </HStack>
+      </Box>
     </Box>
   )
 }
 
 // ── Main Component ──────────────────────────────────────────────────────────
-export function AwardsNominationsList() {
+export function AwardsNominationsList({ hideMatric = false }: { hideMatric?: boolean }) {
+  const isMobile = useIsMobile()
   const [nominations, setNominations] = useState<CategoryNominations[]>([])
   const [allNominations, setAllNominations] = useState<Nomination[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -482,7 +507,114 @@ export function AwardsNominationsList() {
   })
 
   return (
-    <HStack align="start" gap="0" height="calc(100vh - 180px)" overflow="hidden">
+    <Box>
+      {/* ── MOBILE LAYOUT ── */}
+      {isMobile ? (
+        <VStack gap="0" align="stretch">
+          {/* Stats bar */}
+          <HStack
+            gap="6"
+            pb="3"
+            mb="3"
+            style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}20` }}
+          >
+            <VStack gap="0" align="start">
+              <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", letterSpacing: "0.2em", color: COLORS.GOLD_DIM, textTransform: "uppercase" }}>Nominations</Text>
+              <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.6rem", fontWeight: "700", color: COLORS.GOLD_BRIGHT, lineHeight: 1 }}>{totalRows}</Text>
+            </VStack>
+            <VStack gap="0" align="start">
+              <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.5rem", letterSpacing: "0.2em", color: `${COLORS.GOLD_DIM}80`, textTransform: "uppercase" }}>Nominators</Text>
+              <Text style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.2rem", fontWeight: "600", color: COLORS.GOLD_DIM, lineHeight: 1 }}>{totalNominations}</Text>
+            </VStack>
+            <Box flex="1" />
+            <Button
+              onClick={fetchNominations}
+              size="sm"
+              style={{
+                background: `${COLORS.GOLD_BASE}18`,
+                border: `1px solid ${COLORS.GOLD_DIM}40`,
+                color: COLORS.GOLD_BASE,
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.55rem",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+              }}
+            >
+              ↺
+            </Button>
+          </HStack>
+
+          {/* Horizontal category pill-nav */}
+          <Box
+            mb="3"
+            style={{
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              display: "flex",
+              gap: "8px",
+              paddingBottom: "6px",
+            }}
+          >
+            {nominations.map((n) => {
+              const isActive = activeId === n.category.id
+              return (
+                <Box
+                  key={n.category.id}
+                  onClick={() => scrollTo(n.category.id)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "5px 12px",
+                    borderRadius: "20px",
+                    border: `1px solid ${isActive ? COLORS.GOLD_BASE : `${COLORS.GOLD_DIM}40`}`,
+                    background: isActive ? `${COLORS.GOLD_BASE}20` : "transparent",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.62rem", color: isActive ? COLORS.GOLD_BRIGHT : COLORS.GOLD_DIM, fontWeight: isActive ? "600" : "400" }}>
+                    {n.category.name} <span style={{ color: `${COLORS.GOLD_DIM}80` }}>({n.count})</span>
+                  </Text>
+                </Box>
+              )
+            })}
+          </Box>
+
+          {/* Search */}
+          <Input
+            placeholder="Search nominee, nominator…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            mb="3"
+            style={{
+              background: `${COLORS.BG}60`,
+              border: `1px solid ${COLORS.GOLD_DIM}40`,
+              color: COLORS.TEXT,
+              fontFamily: "'Josefin Sans', sans-serif",
+              fontSize: "0.75rem",
+              padding: "8px 12px",
+              borderRadius: "4px",
+              width: "100%",
+            }}
+          />
+
+          {/* Category cards */}
+          <Box>
+            {nominations.map((n) => (
+              <CategoryCard
+                key={n.category.id}
+                data={n}
+                searchQuery={searchQuery}
+                isMobile={true}
+                sectionRef={(el) => { sectionRefs.current[n.category.id] = el }}
+              />
+            ))}
+          </Box>
+        </VStack>
+      ) : (
+        /* ── DESKTOP LAYOUT ── */
+        <HStack align="start" gap="0" height="calc(100vh - 180px)" overflow="hidden">
       {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}
       <Box
         w="220px"
@@ -585,82 +717,84 @@ export function AwardsNominationsList() {
           ↓ Export All CSV
         </Button>
 
-        {/* Reset Matric */}
-        <Box
-          mb="4"
-          pb="4"
-          style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}20` }}
-        >
-          <Text
-            style={{
-              fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: "0.55rem",
-              letterSpacing: "0.2em",
-              color: `${COLORS.GOLD_DIM}90`,
-              textTransform: "uppercase",
-              marginBottom: "6px",
-            }}
+        {/* Reset Matric - admin only */}
+        {!hideMatric && (
+          <Box
+            mb="4"
+            pb="4"
+            style={{ borderBottom: `1px solid ${COLORS.GOLD_DIM}20` }}
           >
-            Reset a Matric
-          </Text>
-          <Text
-            style={{
-              fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: "0.58rem",
-              color: `${COLORS.GOLD_DIM}70`,
-              marginBottom: "8px",
-              lineHeight: 1.5,
-            }}
-          >
-            Deletes all nominations for a matric so they can re-submit.
-          </Text>
-          <Input
-            placeholder="e.g. 2023/12782"
-            value={resetMatric}
-            onChange={(e) => { setResetMatric(e.target.value); setResetStatus("idle"); setResetMessage("") }}
-            size="sm"
-            style={{
-              background: `${COLORS.BG}80`,
-              border: `1px solid ${COLORS.GOLD_DIM}40`,
-              color: COLORS.GOLD_BRIGHT,
-              fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: "0.7rem",
-              marginBottom: "6px",
-              borderRadius: "4px",
-            }}
-          />
-          <Button
-            onClick={resetMatricEntry}
-            size="sm"
-            width="100%"
-            disabled={!resetMatric.trim() || resetStatus === "loading"}
-            style={{
-              background: resetStatus === "success" ? `${COLORS.GOLD_DIM}20` : `#8B000020`,
-              border: `1px solid ${resetStatus === "success" ? COLORS.GOLD_DIM : "#cc333360"}`,
-              color: resetStatus === "success" ? COLORS.GOLD_DIM : "#ff6666",
-              fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: "0.55rem",
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-            }}
-          >
-            {resetStatus === "loading" ? "Clearing..." : "✕ Clear & Allow Re-vote"}
-          </Button>
-          {resetMessage && (
+            <Text
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.55rem",
+                letterSpacing: "0.2em",
+                color: `${COLORS.GOLD_DIM}90`,
+                textTransform: "uppercase",
+                marginBottom: "6px",
+              }}
+            >
+              Reset a Matric
+            </Text>
             <Text
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
                 fontSize: "0.58rem",
-                color: resetStatus === "success" ? COLORS.GOLD_DIM : "#ff6666",
-                marginTop: "6px",
+                color: `${COLORS.GOLD_DIM}70`,
+                marginBottom: "8px",
                 lineHeight: 1.5,
               }}
             >
-              {resetMessage}
+              Deletes all nominations for a matric so they can re-submit.
             </Text>
-          )}
-        </Box>
+            <Input
+              placeholder="e.g. 2023/12782"
+              value={resetMatric}
+              onChange={(e) => { setResetMatric(e.target.value); setResetStatus("idle"); setResetMessage("") }}
+              size="sm"
+              style={{
+                background: `${COLORS.BG}80`,
+                border: `1px solid ${COLORS.GOLD_DIM}40`,
+                color: COLORS.GOLD_BRIGHT,
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.7rem",
+                marginBottom: "6px",
+                borderRadius: "4px",
+              }}
+            />
+            <Button
+              onClick={resetMatricEntry}
+              size="sm"
+              width="100%"
+              disabled={!resetMatric.trim() || resetStatus === "loading"}
+              style={{
+                background: resetStatus === "success" ? `${COLORS.GOLD_DIM}20` : `#8B000020`,
+                border: `1px solid ${resetStatus === "success" ? COLORS.GOLD_DIM : "#cc333360"}`,
+                color: resetStatus === "success" ? COLORS.GOLD_DIM : "#ff6666",
+                fontFamily: "'Josefin Sans', sans-serif",
+                fontSize: "0.55rem",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+              }}
+            >
+              {resetStatus === "loading" ? "Clearing..." : "✕ Clear & Allow Re-vote"}
+            </Button>
+            {resetMessage && (
+              <Text
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: "0.58rem",
+                  color: resetStatus === "success" ? COLORS.GOLD_DIM : "#ff6666",
+                  marginTop: "6px",
+                  lineHeight: 1.5,
+                }}
+              >
+                {resetMessage}
+              </Text>
+            )}
+          </Box>
+        )}
 
         {/* Category nav links */}
         <Text
@@ -758,7 +892,7 @@ export function AwardsNominationsList() {
             ⊞ All Nominations
           </Button>
           <Input
-            placeholder="Search nominee, nominator, matric, category…"
+            placeholder={hideMatric ? "Search nominee or nominator…" : "Search nominee, nominator, matric, category…"}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -784,7 +918,7 @@ export function AwardsNominationsList() {
             >
               <Box as="thead">
                 <Box as="tr">
-                  {["#","Category","Nominee","Nominator","Matric","Date"].map((h) => (
+                  {["#", "Category", "Nominee", "Nominator", ...(!hideMatric ? ["Matric"] : []), "Date"].map((h) => (
                     <Box as="th" key={h} style={{
                       padding: "8px 12px", textAlign: "left",
                       color: COLORS.GOLD_DIM, letterSpacing: "0.15em",
@@ -812,9 +946,11 @@ export function AwardsNominationsList() {
                     <Box as="td" style={{ padding: "6px 12px", color: COLORS.GOLD_DIM }}>
                       {String(n.nominator_name ?? "")}
                     </Box>
-                    <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}80`, whiteSpace: "nowrap" }}>
-                      {String((n as Record<string, unknown>).nominator_matric ?? "")}
-                    </Box>
+                    {!hideMatric && (
+                      <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}80`, whiteSpace: "nowrap" }}>
+                        {String((n as Record<string, unknown>).nominator_matric ?? "")}
+                      </Box>
+                    )}
                     <Box as="td" style={{ padding: "6px 12px", color: `${COLORS.GOLD_DIM}60`, whiteSpace: "nowrap" }}>
                       {new Date(n.created_at ?? "").toLocaleDateString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}
                     </Box>
@@ -836,10 +972,13 @@ export function AwardsNominationsList() {
             key={n.category.id}
             data={n}
             searchQuery={searchQuery}
+            isMobile={false}
             sectionRef={(el) => { sectionRefs.current[n.category.id] = el }}
           />
         ))}
       </Box>
     </HStack>
+      )}
+    </Box>
   )
 }
