@@ -304,23 +304,57 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           </Text>
         </Box>
 
-        <Button
-          onClick={onBegin}
-          bg="transparent"
-          color={COLORS.GOLD_BASE}
-          border={`1px solid ${COLORS.GOLD_DIM}60`}
-          borderRadius="2px"
-          px={8}
-          py={5}
-          fontSize="xs"
-          letterSpacing="3px"
-          textTransform="uppercase"
-          width="100%"
-          _hover={{ bg: `${COLORS.GOLD_GLOW}10`, borderColor: COLORS.GOLD_BASE }}
-          style={{ opacity: visible ? 1 : 0, transition: "opacity 0.6s ease 1.6s" }}
+        {/* ── NOMINATIONS CLOSED BANNER ── */}
+        <Box
+          w="100%"
+          border={`1px solid ${COLORS.GOLD_BASE}50`}
+          borderRadius="4px"
+          px={6}
+          py={6}
+          bg={`${COLORS.GOLD_GLOW}08`}
+          position="relative"
+          style={{
+            opacity: visible ? 1 : 0,
+            transition: "opacity 0.6s ease 1.6s",
+          }}
         >
-          Begin Nominations
-        </Button>
+          {/* Corner accents */}
+          <Box position="absolute" top="-1px" left="-1px" w="14px" h="14px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
+          <Box position="absolute" top="-1px" right="-1px" w="14px" h="14px" borderTop={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
+          <Box position="absolute" bottom="-1px" left="-1px" w="14px" h="14px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
+          <Box position="absolute" bottom="-1px" right="-1px" w="14px" h="14px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
+
+          <VStack gap={3}>
+            <Text
+              color={COLORS.GOLD_DIM}
+              fontSize="8px"
+              letterSpacing="4px"
+              textTransform="uppercase"
+            >
+              ✦ &nbsp; Nominations Closed &nbsp; ✦
+            </Text>
+            <Text
+              fontFamily="'Cormorant Garamond', serif"
+              color={COLORS.GOLD_BRIGHT}
+              fontSize="xl"
+              letterSpacing="2px"
+              fontWeight="300"
+              textAlign="center"
+            >
+              The nomination window has ended.
+            </Text>
+            <Text
+              color={`${COLORS.GOLD_DIM}90`}
+              fontSize="xs"
+              lineHeight="1.9"
+              textAlign="center"
+            >
+              Thank you to everyone who submitted their nominations.
+              <br />
+              The voting process will be revealed soon — stay tuned.
+            </Text>
+          </VStack>
+        </Box>
 
         <Text
           color={`${COLORS.GOLD_GLOW}50`}
@@ -334,6 +368,8 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
     </Box>
   )
 }
+
+const NOMINATIONS_LOCKED = true
 
 export default function AwardsPage() {
   const [hasBegun, setHasBegun] = useState(false)
@@ -510,7 +546,7 @@ export default function AwardsPage() {
     }
   }
 
-  if (!hasBegun) return <LandingScreen onBegin={() => setHasBegun(true)} />
+  if (NOMINATIONS_LOCKED || !hasBegun) return <LandingScreen onBegin={() => setHasBegun(true)} />
 
   if (alreadyVoted) {
     return (
