@@ -1,19 +1,27 @@
 import { useState, useEffect } from "react"
-import { AdminLogin } from "@/components/admin/AdminLogin"
+import { AdminLogin, type AdminRole } from "@/components/admin/AdminLogin"
 import { AdminDashboard } from "@/components/admin/AdminDashboard"
 
 export default function AdminPage() {
-  const [authed, setAuthed] = useState(false)
+  const [role, setRole] = useState<AdminRole | null>(null)
 
   useEffect(() => {
-    if (sessionStorage.getItem("gatsby_admin") === "1") {
-      setAuthed(true)
-    }
+    const stored = sessionStorage.getItem("gatsby_admin")
+    if (stored === "admin") setRole("admin")
+    else if (stored === "exco") setRole("exco")
+    // legacy: treat old "1" value as full admin
+    else if (stored === "1") setRole("admin")
   }, [])
 
-  if (!authed) {
-    return <AdminLogin onLogin={() => setAuthed(true)} />
+  if (!role) {
+    return (
+      <AdminLogin
+        onLogin={(r) => {
+          setRole(r)
+        }}
+      />
+    )
   }
 
-  return <AdminDashboard />
+  return <AdminDashboard role={role} />
 }

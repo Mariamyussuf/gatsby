@@ -4,9 +4,14 @@ import { COLORS } from "@/config/constants"
 import { toaster } from "@/components/ui/toaster"
 
 const ADMIN_PASSWORD = "BusaGala2025!"
+// Exco password — grants access to admin dashboard but hides all ticket-related sections.
+// Awards nominations tab still requires a separate code to reveal results.
+const EXCO_PASSWORD = "BusaExco2025!"
+
+export type AdminRole = "admin" | "exco"
 
 type Props = {
-  onLogin: () => void
+  onLogin: (role: AdminRole) => void
 }
 
 export function AdminLogin({ onLogin }: Props) {
@@ -17,8 +22,11 @@ export function AdminLogin({ onLogin }: Props) {
     setLoading(true)
     setTimeout(() => {
       if (password === ADMIN_PASSWORD) {
-        sessionStorage.setItem("gatsby_admin", "1")
-        onLogin()
+        sessionStorage.setItem("gatsby_admin", "admin")
+        onLogin("admin")
+      } else if (password === EXCO_PASSWORD) {
+        sessionStorage.setItem("gatsby_admin", "exco")
+        onLogin("exco")
       } else {
         toaster.error({ title: "Access Denied", description: "Invalid password." })
       }
