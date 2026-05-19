@@ -158,7 +158,6 @@ function AwardsGate({ onUnlock }: { onUnlock: () => void }) {
 export function AdminDashboard({ role }: { role: AdminRole }) {
   const [activeTab, setActiveTab] = useState(role === "exco" ? "awards" : "overview")
   const [presetManualReference, setPresetManualReference] = useState<string | null>(null)
-  const [awardsUnlocked, setAwardsUnlocked] = useState(false)
 
   const isExco = role === "exco"
   const tabs = ALL_TABS.filter((t) => !isExco || t.exco)
@@ -184,7 +183,7 @@ export function AdminDashboard({ role }: { role: AdminRole }) {
                 verticalAlign: "middle",
               }}
             >
-              · Exco View
+              · Admin View
             </Text>
           )}
         </Heading>
@@ -245,11 +244,7 @@ export function AdminDashboard({ role }: { role: AdminRole }) {
           )}
 
           <Tabs.Content value="awards">
-            {isExco && !awardsUnlocked ? (
-              <AwardsGate onUnlock={() => setAwardsUnlocked(true)} />
-            ) : (
-              <AwardsNominationsList />
-            )}
+            <AwardsNominationsList />
           </Tabs.Content>
 
           {!isExco && (
