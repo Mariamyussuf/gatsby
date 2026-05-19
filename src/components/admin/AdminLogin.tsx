@@ -6,7 +6,7 @@ import { toaster } from "@/components/ui/toaster"
 const ADMIN_PASSWORD = "BusaGala2025!"
 // Exco password — grants access to admin dashboard but hides all ticket-related sections.
 // Awards nominations tab still requires a separate code to reveal results.
-const EXCO_PASSWORD = "BusaExco2025!"
+const EXCO_PASSWORD = "Busaaward2026!"
 
 export type AdminRole = "admin" | "exco"
 
