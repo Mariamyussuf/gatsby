@@ -246,7 +246,6 @@ export function VotingResultsPanel() {
 
       setCategoryData(result)
       setLastRefresh(new Date())
-      if (!activeGroup) setActiveGroup(VOTING_GROUPS[0]?.type ?? null)
     } catch (err) {
       console.error("[VotingResults] Error fetching votes:", err)
     } finally {
