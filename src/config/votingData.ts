@@ -83,15 +83,14 @@ export const VOTING_GROUPS: VotingGroup[] = [
           { name: "Frank Cleave Kasimanwuna" },
           { name: "Olowo Covenant" },
           { name: "Okiki Imole" },
-          { name: "Teslim" },
+          { name: " Lukman Teslim" },
         ],
       },
       {
         name: "Most Popular (Male)",
         nominees: [
           { name: "Okiki Imole" },
-          { name: "Adekunle Daniel (Bunda)" },
-          { name: "Mario" },
+          { name: "UNCLE BOLU" },
           { name: "Oluwagbotemi Adebayo" },
           { name: "Lukman Teslim" },
         ],
@@ -119,9 +118,9 @@ export const VOTING_GROUPS: VotingGroup[] = [
       {
         name: "Most Sociable (Male)",
         nominees: [
-          { name: "UNCLE BOLU" },
+          { name:"Adekunle Daniel (Bunda)" },
           { name: "Okonkwo Prince (Prince K)" },
-          { name: "Justin" },
+          { name: "Okeiukwu Anthony-Mario"  },
           { name: "Oluwagbotemi Adebayo (GECHO)" },
           { name: "Okiki Imole" },
         ],
