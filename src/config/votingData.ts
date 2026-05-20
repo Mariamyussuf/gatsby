@@ -91,7 +91,8 @@ export const VOTING_GROUPS: VotingGroup[] = [
         nominees: [
           { name: "Okiki Imole" },
           { name: "UNCLE BOLU" },
-          { name: "Oluwagbotemi Adebayo" },
+          { name: "Oluwagbotemi Adebayo(GECHO)" },
+          { name: "Daniel Olufemi" },
           { name: "Lukman Teslim" },
         ],
       },
@@ -175,7 +176,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
         name: "Talent of the Year",
         nominees: [
           { name: "Okeiukwu Anthony-Mario" },
-          { name: "Oluwagbotemi Adebayo" },
+          { name: "Oluwagbotemi Adebayo(GECHO)" },
           { name: "Ebun & Zanny" },
           { name: "Tonye" },
         ],
@@ -193,7 +194,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
       {
         name: "DJ / Music Producer of the Year",
         nominees: [
-          { name: "Dj Gecho" },
+          { name: "Dj GECHO" },
           { name: "Dj Remix" },
           { name: "Kuspid" },
           { name: "Joseph" },
@@ -221,7 +222,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
         name: "Entrepreneur of the Year",
         nominees: [
           { name: "Bibi's Hut" },
-          { name: "Esscentials" },
+          { name: "EsscentialS" },
           { name: "Hope" },
           { name: "Siberia" },
           { name: "Winston Stores" },
@@ -395,7 +396,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
           { name: "Ireoluwa Oke" },
           { name: "Olisa Churchill" },
           { name: "Atuh Joel" },
-          { name: "Oluwagbotemi Adebayo" },
+          { name: "Oluwagbotemi Adebayo (GECHO)" },
         ],
       },
       {
