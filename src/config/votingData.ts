@@ -51,7 +51,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
         nominees: [
           { name: "Adeyemi Adeoye" },
           { name: "Frank Cleave Kasimanwuna" },
-          { name: "Toju LaDI-Williams" },
+          { name: "Toju Ladi-Williams" },
           { name: "Damilola" },
           { name: "Savior Edward" },
         ],
