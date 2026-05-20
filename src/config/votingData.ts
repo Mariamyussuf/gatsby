@@ -51,7 +51,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
         nominees: [
           { name: "Adeyemi Adeoye" },
           { name: "Frank Cleave Kasimanwuna" },
-          { name: "Toju Laid-Williams" },
+          { name: "Toju LaDI-Williams" },
           { name: "Damilola" },
           { name: "Savior Edward" },
         ],
@@ -178,7 +178,6 @@ export const VOTING_GROUPS: VotingGroup[] = [
           { name: "Okeiukwu Anthony-Mario" },
           { name: "Oluwagbotemi Adebayo" },
           { name: "Ebun & Zanny" },
-          { name: "Arome Phoebe" },
           { name: "Tonye" },
         ],
       },
@@ -242,7 +241,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
       {
         name: "Brand of the Year",
         nominees: [
-          { name: "Biba's Cosmetics" },
+          { name: "Biebarh Cosmetics" },
           { name: "Space Worm" },
           { name: "Hope" },
           { name: "Winston Island" },
@@ -283,7 +282,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
           { name: "Sammy" },
           { name: "Reward" },
           { name: "Jess" },
-          { name: "Emememe" },
+          { name: "Ememe" },
         ],
       },
       {
