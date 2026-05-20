@@ -200,38 +200,36 @@ export function VotingResultsPanel() {
 
   const fetchVotes = async () => {
     try {
-      // Get all votes
-      const { data: votes, error } = await supabase
+      // Exact total vote row count (bypasses row cap)
+      const { count: exactCount } = await supabase
         .from("award_votes")
-        .select("*")
-        .order("created_at", { ascending: false })
+        .select("*", { count: "exact", head: true })
 
-      if (error) throw error
+      // Exact unique voter count via RPC
+      const { data: uniqueVoterCount } = await supabase.rpc("get_unique_voter_count")
 
-      // Total unique voters
-      const uniqueMatrics = new Set((votes ?? []).map((v: Record<string, unknown>) => v.voter_matric as string))
-      setTotalVoters(uniqueMatrics.size)
-      setTotalVoteRows(votes?.length ?? 0)
+      // Per-category tallies via RPC (one row per category, no row cap issues)
+      const { data: talliesData } = await supabase.rpc("get_vote_tallies")
 
-      // Build tally per category
-      const tallyMap: Record<string, Record<string, number>> = {}
-      for (const vote of (votes ?? [])) {
-        const cat = vote.award_category_name as string
-        const nominee = vote.nominee_name as string
-        if (!tallyMap[cat]) tallyMap[cat] = {}
-        tallyMap[cat][nominee] = (tallyMap[cat][nominee] ?? 0) + 1
+      setTotalVoteRows(exactCount ?? 0)
+      setTotalVoters(Number(uniqueVoterCount ?? 0))
+
+      // Build category data from RPC tally results
+      const tallyByCategory: Record<string, { name: string; count: number }[]> = {}
+      for (const row of (talliesData ?? []) as { category_name: string; tallies: { nominee_name: string; vote_count: number }[] }[]) {
+        tallyByCategory[row.category_name] = (row.tallies ?? []).map((t) => ({
+          name: t.nominee_name,
+          count: Number(t.vote_count),
+        }))
       }
 
-      // Map to our voting groups structure
+      // Map to voting groups structure
       const result: CategoryVoteData[] = []
       for (const group of VOTING_GROUPS) {
         for (const category of group.categories) {
-          const catTallies = tallyMap[category.name] ?? {}
-          const tallies = Object.entries(catTallies)
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count)
+          const tallies = tallyByCategory[category.name] ?? []
 
-          // If no votes yet, still show category with all nominees at 0
+          // If no votes yet, show all nominees at 0
           const finalTallies = tallies.length > 0
             ? tallies
             : category.nominees.map((n) => ({ name: n.name, count: 0 }))
