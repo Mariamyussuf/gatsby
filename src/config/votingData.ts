@@ -79,7 +79,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
       {
         name: "Most Influential (Male)",
         nominees: [
-          { name: "Falola Boluwatife (Uncle Bolu)" },
+          { name: "UNCLE BOLU" },
           { name: "Frank Cleave Kasimanwuna" },
           { name: "Olowo Covenant" },
           { name: "Okiki Imole" },
@@ -109,7 +109,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
       {
         name: "Spotlight Award",
         nominees: [
-          { name: "Falola Boluwatife (Uncle Bolu)" },
+          { name: "UNCLE BOLU" },
           { name: "Damilola" },
           { name: "Lukman Teslim" },
           { name: "Sanni Samiat" },
@@ -119,7 +119,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
       {
         name: "Most Sociable (Male)",
         nominees: [
-          { name: "Falola Boluwatife (Uncle Bolu)" },
+          { name: "UNCLE BOLU" },
           { name: "Okonkwo Prince (Prince K)" },
           { name: "Justin" },
           { name: "Oluwagbotemi Adebayo (GECHO)" },
@@ -156,7 +156,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
       {
         name: "Icon 360",
         nominees: [
-          { name: "Falola Boluwatife (Uncle Bolu)" },
+          { name: "UNCLE BOLU" },
           { name: "Adewuyi David" },
           { name: "Lukman Teslim" },
           { name: "Arome Phoebe" },
