@@ -280,7 +280,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           ))}
         </VStack>
 
-        {/* ── NOMINATIONS CLOSED BANNER ── */}
+        {/* ── VOTING NOW OPEN BANNER ── */}
         <Box
           w="100%"
           border={`1px solid ${COLORS.GOLD_BASE}50`}
@@ -300,14 +300,14 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
           <Box position="absolute" bottom="-1px" left="-1px" w="14px" h="14px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderLeft={`1px solid ${COLORS.GOLD_BASE}`} />
           <Box position="absolute" bottom="-1px" right="-1px" w="14px" h="14px" borderBottom={`1px solid ${COLORS.GOLD_BASE}`} borderRight={`1px solid ${COLORS.GOLD_BASE}`} />
 
-          <VStack gap={3}>
+          <VStack gap={4}>
             <Text
               color={COLORS.GOLD_DIM}
               fontSize="8px"
               letterSpacing="4px"
               textTransform="uppercase"
             >
-              ✦ &nbsp; Nominations Closed &nbsp; ✦
+              ✦ &nbsp; Voting Is Now Open &nbsp; ✦
             </Text>
             <Text
               fontFamily="'Cormorant Garamond', serif"
@@ -317,7 +317,7 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
               fontWeight="300"
               textAlign="center"
             >
-              The nomination window has ended.
+              We heard you. Your nominations are in.
             </Text>
             <Text
               color={`${COLORS.GOLD_DIM}90`}
@@ -325,10 +325,30 @@ function LandingScreen({ onBegin }: { onBegin: () => void }) {
               lineHeight="1.9"
               textAlign="center"
             >
-              Thank you to everyone who submitted their nominations.
+              You chose these people — but there can only be one winner.
               <br />
-              The voting process will be revealed soon — stay tuned.
+              Cast your votes now and decide who takes it home.
             </Text>
+            <Link href="/vote" _hover={{ textDecoration: "none" }} width="100%">
+              <Button
+                width="100%"
+                bg="transparent"
+                color={COLORS.GOLD_BASE}
+                border={`1px solid ${COLORS.GOLD_DIM}60`}
+                borderRadius="2px"
+                fontSize="xs"
+                letterSpacing="4px"
+                textTransform="uppercase"
+                py={6}
+                _hover={{
+                  bg: `${COLORS.GOLD_GLOW}12`,
+                  borderColor: COLORS.GOLD_BASE,
+                  boxShadow: `0 4px 20px ${COLORS.GOLD_GLOW}20`,
+                }}
+              >
+                Vote Now →
+              </Button>
+            </Link>
           </VStack>
         </Box>
 

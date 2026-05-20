@@ -8,6 +8,7 @@ import AdminPage from "@/pages/Admin"
 import ManageTicketPage from "@/pages/ManageTicket"
 import PaymentCallbackPage from "@/pages/PaymentCallback"
 import AwardsPage from "@/pages/Awards"
+import VotingPage from "@/pages/Voting"
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/awards" element={<AwardsPage />} />
+        <Route path="/vote" element={<VotingPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/manage/:manageToken" element={<ManageTicketPage />} />
         <Route path="/payment/callback" element={<PaymentCallbackPage />} />
