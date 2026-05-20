@@ -314,7 +314,7 @@ function VotingLanding({ onBegin }: { onBegin: () => void }) {
             >
               <HStack justify="space-between">
                 <Text color={COLORS.GOLD_DIM} fontSize="10px" letterSpacing="1px" textTransform="uppercase">
-                  {group.emoji} &nbsp; {group.name}
+                  {group.name}
                 </Text>
                 <Text color={`${COLORS.GOLD_DIM}70`} fontSize="10px">
                   {group.categories.length} award{group.categories.length !== 1 ? "s" : ""}
@@ -835,7 +835,7 @@ export default function VotingPage() {
                       fontWeight="400"
                       letterSpacing="1px"
                     >
-                      {group.emoji} {group.name}
+                      {group.name}
                     </Heading>
                   </HStack>
                   <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs">
@@ -940,7 +940,7 @@ export default function VotingPage() {
               {VOTING_GROUPS.map((group) => (
                 <Box key={group.type} borderLeft={`1px solid ${COLORS.GOLD_DIM}30`} pl={4} py={1}>
                   <Text color={COLORS.GOLD_DIM} fontSize="9px" letterSpacing="2px" textTransform="uppercase" mb={3}>
-                    {group.emoji} {group.name}
+                    {group.name}
                   </Text>
                   <VStack gap={2} align="stretch">
                     {group.categories.map((cat) => (

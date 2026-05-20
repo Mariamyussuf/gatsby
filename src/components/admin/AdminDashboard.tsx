@@ -30,11 +30,11 @@ const ALL_TABS = [
   { value: "manual", label: "Payments & recovery", exco: false },
   { value: "attendees", label: "Attendees", exco: false },
   { value: "awards", label: "Awards", exco: true },
-  { value: "votes", label: "🗳️ Live Votes", exco: true },
+  { value: "votes", label: "Live Votes", exco: true },
   { value: "vvip", label: "VVIP Pickups", exco: false },
   { value: "waitlist", label: "Waitlist", exco: false },
   { value: "scanner", label: "QR Scanner", exco: false },
-  { value: "blast", label: "📣 Blast Email", exco: false },
+  { value: "blast", label: "Blast Email", exco: false },
 ]
 
 // ── Awards gate shown to exco before they enter the unlock code ───────────────

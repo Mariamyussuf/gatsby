@@ -32,7 +32,6 @@ interface VoteTally {
 interface CategoryVoteData {
   categoryName: string
   groupName: string
-  groupEmoji: string
   tallies: { name: string; count: number }[]
   totalVotes: number
 }
@@ -76,7 +75,7 @@ function VoteBarChart({ tallies }: { tallies: { name: string; count: number }[] 
                   maxWidth: "65%",
                 }}
               >
-                {isTop && "👑 "}{entry.name}
+                {entry.name}
               </Text>
               <Text
                 style={{
@@ -241,7 +240,6 @@ export function VotingResultsPanel() {
           result.push({
             categoryName: category.name,
             groupName: group.name,
-            groupEmoji: group.emoji,
             tallies: finalTallies,
             totalVotes,
           })
@@ -570,7 +568,7 @@ export function VotingResultsPanel() {
               }}
             >
               <Text style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: "0.62rem", color: isActive ? COLORS.GOLD_BRIGHT : COLORS.GOLD_DIM, fontWeight: isActive ? "600" : "400" }}>
-                {group.emoji} {group.name} <span style={{ color: `${COLORS.GOLD_DIM}80` }}>({groupVotes})</span>
+                {group.name} <span style={{ color: `${COLORS.GOLD_DIM}80` }}>({groupVotes})</span>
               </Text>
             </Box>
           )
@@ -601,7 +599,7 @@ export function VotingResultsPanel() {
                   letterSpacing: "1px",
                 }}
               >
-                {cats[0]?.groupEmoji} {groupName}
+                {groupName}
               </Text>
               <Text
                 style={{

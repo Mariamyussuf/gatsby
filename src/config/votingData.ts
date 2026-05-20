@@ -16,7 +16,7 @@ export interface VotingCategory {
 export interface VotingGroup {
   type: string
   name: string
-  emoji: string
+
   categories: VotingCategory[]
 }
 
@@ -24,7 +24,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
   {
     type: "social",
     name: "Social Awards",
-    emoji: "👑",
+
     categories: [
       {
         name: "Freshest Fresher of the Year",
@@ -151,7 +151,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
   {
     type: "entertainment",
     name: "Entertainment Awards",
-    emoji: "🎭",
+
     categories: [
       {
         name: "Icon 360",
@@ -217,7 +217,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
   {
     type: "innovation",
     name: "Innovation Awards",
-    emoji: "💡",
+
     categories: [
       {
         name: "Entrepreneur of the Year",
@@ -254,7 +254,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
   {
     type: "sports",
     name: "Sports Awards",
-    emoji: "⚽",
+
     categories: [
       {
         name: "Sports Personality (Male)",
@@ -321,7 +321,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
   {
     type: "creative",
     name: "Creative Awards",
-    emoji: "🎨",
+
     categories: [
       {
         name: "Photographer of the Year",
@@ -358,7 +358,7 @@ export const VOTING_GROUPS: VotingGroup[] = [
   {
     type: "leadership",
     name: "Leadership Awards",
-    emoji: "🏛️",
+
     categories: [
       {
         name: "Academic Excellence Award",
