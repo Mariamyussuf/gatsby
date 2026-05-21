@@ -414,8 +414,77 @@ function VotingLanding({ onBegin }: { onBegin: () => void }) {
 /* ═════════════════════════════════════════════════════════════
    MAIN VOTING PAGE
    ═════════════════════════════════════════════════════════════ */
+const VOTING_CLOSED = true
+
 export default function VotingPage() {
   const [hasBegun, setHasBegun] = useState(false)
+
+  if (VOTING_CLOSED) {
+    return (
+      <Box
+        minH="100vh"
+        bg={COLORS.BG}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        px={6}
+        position="relative"
+        overflow="hidden"
+      >
+        {/* Background glow */}
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          w="600px"
+          h="600px"
+          borderRadius="full"
+          bg={`radial-gradient(circle, ${COLORS.GOLD_GLOW}10 0%, transparent 70%)`}
+          pointerEvents="none"
+        />
+        <VStack gap={6} textAlign="center" maxW="440px" position="relative">
+          <VStack gap={2}>
+            <Text color={`${COLORS.GOLD_DIM}80`} fontSize="9px" letterSpacing="4px" textTransform="uppercase">
+              Bells University Student Association
+            </Text>
+            <Heading
+              fontFamily="'Cormorant Garamond', serif"
+              color={COLORS.GOLD_BRIGHT}
+              fontSize="4xl"
+              letterSpacing="3px"
+              fontWeight="300"
+            >
+              Voting Closed
+            </Heading>
+          </VStack>
+          <Box w="100%" border={`1px solid ${COLORS.GOLD_DIM}25`} borderRadius="4px" p={6} position="relative">
+            <CornerAccents />
+            <VStack gap={3}>
+              <Text
+                fontFamily="'Cormorant Garamond', serif"
+                color={COLORS.GOLD_DIM}
+                fontSize="lg"
+                fontWeight="300"
+                lineHeight="1.8"
+              >
+                Voting has now closed.
+              </Text>
+              <Text color={`${COLORS.GOLD_DIM}70`} fontSize="xs" lineHeight="1.9">
+                The results will be revealed at the Great Gatsby Gala.
+                <br />
+                We'll see you on the night.
+              </Text>
+            </VStack>
+          </Box>
+          <Text color={`${COLORS.GOLD_GLOW}40`} fontSize="8px" letterSpacing="4px" textTransform="uppercase">
+            BUILT TO COOK
+          </Text>
+        </VStack>
+      </Box>
+    )
+  }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isCheckingMatric, setIsCheckingMatric] = useState(false)
