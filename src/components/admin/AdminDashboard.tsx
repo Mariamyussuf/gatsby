@@ -29,7 +29,7 @@ const ALL_TABS = [
   { value: "transactions", label: "Transactions", exco: false },
   { value: "manual", label: "Payments & recovery", exco: false },
   { value: "attendees", label: "Attendees", exco: false },
-  { value: "awards", label: "Awards", exco: true },
+  { value: "awards", label: "Awards", exco: false },
   { value: "votes", label: "Live Votes", exco: false },
   { value: "vvip", label: "VVIP Pickups", exco: false },
   { value: "waitlist", label: "Waitlist", exco: false },
@@ -37,120 +37,85 @@ const ALL_TABS = [
   { value: "blast", label: "Blast Email", exco: false },
 ]
 
-// ── Awards gate shown to exco before they enter the unlock code ───────────────
-function AwardsGate({ onUnlock }: { onUnlock: () => void }) {
-  const [code, setCode] = useState("")
-  const [shake, setShake] = useState(false)
-
-  const attempt = () => {
-    if (code.trim() === AWARDS_UNLOCK_CODE) {
-      onUnlock()
-    } else {
-      setShake(true)
-      setCode("")
-      setTimeout(() => setShake(false), 600)
-    }
-  }
-
+// ── Blocked screen shown to exco — no access to any panel ────────────────────
+function ExcoBlocked() {
   return (
     <Box
       display="flex"
       alignItems="center"
       justifyContent="center"
-      minH="400px"
+      minH="100vh"
+      style={{ backgroundColor: COLORS.BG }}
     >
       <Box
-        p="10"
-        maxW="360px"
+        p="12"
+        maxW="420px"
         w="full"
+        textAlign="center"
         style={{
-          border: `1px solid ${COLORS.GOLD_DIM}35`,
-          background: `linear-gradient(180deg, ${COLORS.PANEL_MID}60 0%, ${COLORS.BG} 100%)`,
-          borderRadius: "8px",
-          boxShadow: `0 0 40px ${COLORS.GOLD_GLOW}15`,
-          animation: shake ? "shake 0.5s ease" : undefined,
+          border: `1px solid #cc333340`,
+          background: `linear-gradient(180deg, #1a000a 0%, ${COLORS.BG} 100%)`,
+          borderRadius: "10px",
+          boxShadow: `0 0 60px #cc000025`,
         }}
       >
-        <style>{`
-          @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-8px); }
-            40%, 80% { transform: translateX(8px); }
-          }
-        `}</style>
-
-        <VStack gap="6">
-          <VStack gap="1" textAlign="center">
-            <Text
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "1.6rem",
-                fontWeight: "700",
-                letterSpacing: "0.15em",
-                color: COLORS.GOLD_BRIGHT,
-              }}
-            >
-              🏆 Awards
-            </Text>
-            <Text
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.6rem",
-                letterSpacing: "0.25em",
-                color: COLORS.GOLD_DIM,
-                textTransform: "uppercase",
-              }}
-            >
-              Nominations Unlock Code Required
-            </Text>
-            <Text
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.65rem",
-                color: `${COLORS.GOLD_DIM}80`,
-                marginTop: "4px",
-                textAlign: "center",
-                lineHeight: 1.6,
-              }}
-            >
-              Enter the nominations access code to view award tallies.
-            </Text>
-          </VStack>
-
-          <VStack gap="3" w="full">
-            <Input
-              type="password"
-              placeholder="Enter nominations code…"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && attempt()}
-              style={{
-                background: `${COLORS.PANEL_MID}60`,
-                border: `1px solid ${COLORS.GOLD_DIM}40`,
-                color: COLORS.GOLD_BASE,
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.8rem",
-              }}
-            />
-            <Button
-              onClick={attempt}
-              w="full"
-              style={{
-                background: `linear-gradient(135deg, ${COLORS.GOLD_DIM}, ${COLORS.GOLD_BASE})`,
-                color: COLORS.BG,
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: "0.65rem",
-                fontWeight: "600",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                height: "44px",
-                cursor: "pointer",
-              }}
-            >
-              Unlock
-            </Button>
-          </VStack>
-        </VStack>
+        <Text
+          style={{
+            fontSize: "3.5rem",
+            marginBottom: "12px",
+            lineHeight: 1,
+          }}
+        >
+          🌐
+        </Text>
+        <Text
+          style={{
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: "0.55rem",
+            letterSpacing: "0.3em",
+            color: `${COLORS.GOLD_DIM}60`,
+            textTransform: "uppercase",
+            marginBottom: "10px",
+          }}
+        >
+          ERR_SITE_UNAVAILABLE
+        </Text>
+        <Text
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: "1.7rem",
+            fontWeight: "700",
+            letterSpacing: "0.05em",
+            color: "#e05555",
+            marginBottom: "12px",
+          }}
+        >
+          This page is unavailable
+        </Text>
+        <Text
+          style={{
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: "0.68rem",
+            color: `${COLORS.GOLD_DIM}70`,
+            lineHeight: 1.9,
+            marginBottom: "20px",
+          }}
+        >
+          You don't have permission to view this page.
+          <br />
+          Contact your administrator if you believe this is an error.
+        </Text>
+        <Text
+          style={{
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: "0.5rem",
+            letterSpacing: "0.15em",
+            color: `${COLORS.GOLD_DIM}35`,
+            textTransform: "uppercase",
+          }}
+        >
+          Error Code: 403 · Forbidden
+        </Text>
       </Box>
     </Box>
   )
@@ -158,10 +123,14 @@ function AwardsGate({ onUnlock }: { onUnlock: () => void }) {
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
 export function AdminDashboard({ role }: { role: AdminRole }) {
-  const [activeTab, setActiveTab] = useState(role === "exco" ? "awards" : "overview")
+  const [activeTab, setActiveTab] = useState("overview")
   const [presetManualReference, setPresetManualReference] = useState<string | null>(null)
 
   const isExco = role === "exco"
+
+  // Excos see nothing — just a blocked screen
+  if (isExco) return <ExcoBlocked />
+
   const tabs = ALL_TABS.filter((t) => !isExco || t.exco)
 
   // If active tab gets hidden after role change, reset to overview
