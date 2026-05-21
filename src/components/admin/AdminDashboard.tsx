@@ -95,19 +95,6 @@ function ExcoBlocked() {
         <Text
           style={{
             fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: "0.68rem",
-            color: `${COLORS.GOLD_DIM}70`,
-            lineHeight: 1.9,
-            marginBottom: "20px",
-          }}
-        >
-          You don't have permission to view this page.
-          <br />
-          Contact your administrator if you believe this is an error.
-        </Text>
-        <Text
-          style={{
-            fontFamily: "'Josefin Sans', sans-serif",
             fontSize: "0.5rem",
             letterSpacing: "0.15em",
             color: `${COLORS.GOLD_DIM}35`,
