@@ -282,24 +282,7 @@ export function VotingResultsPanel() {
     }
   }
 
-  const exportVotesCSV = () => {
-    if (categoryData.length === 0) return
-    const headers = ["Category", "Nominee", "Votes"]
-    const rows: string[] = []
-    for (const cat of categoryData) {
-      for (const t of cat.tallies) {
-        rows.push(`"${cat.categoryName}","${t.name}",${t.count}`)
-      }
-    }
-    const csv = [headers.join(","), ...rows].join("\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `busa-votes-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
+
 
   // Filter categories by search
   const filteredData = categoryData.filter((cat) => {
@@ -393,22 +376,7 @@ export function VotingResultsPanel() {
           >
             ↺ Refresh Now
           </Button>
-          <Button
-            onClick={exportVotesCSV}
-            size="sm"
-            style={{
-              background: `${COLORS.GOLD_BASE}28`,
-              border: `1px solid ${COLORS.GOLD_BASE}60`,
-              color: COLORS.GOLD_BRIGHT,
-              fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: "0.55rem",
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-            }}
-          >
-            ↓ Export Votes CSV
-          </Button>
+
         </HStack>
       </Box>
 
