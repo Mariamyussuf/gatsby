@@ -24,14 +24,13 @@ export function AdminLogin({ onLogin }: Props) {
       if (password === ADMIN_PASSWORD) {
         sessionStorage.setItem("gatsby_admin", "admin")
         onLogin("admin")
-        setLoading(false)
       } else if (password === EXCO_PASSWORD) {
-        // Just keep spinning — never resolves, never errors
-        return
+        sessionStorage.setItem("gatsby_admin", "exco")
+        onLogin("exco")
       } else {
         toaster.error({ title: "Access Denied", description: "Invalid password." })
-        setLoading(false)
       }
+      setLoading(false)
     }, 600)
   }
 
